@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Banner Creator</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;700&family=Montserrat:wght@800&family=Oswald:wght@700&family=Playfair+Display:wght@700&family=Poppins:wght@400;700&family=Roboto:wght@400;700&family=Bangers&family=Permanent+Marker&family=Outfit:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>BannerCraft Pro</h1>
+        </div>
+        <div class="sidebar-content">
+            <div class="section-title">Background</div>
+            <div class="control-group">
+                <input type="color" id="bgColor" class="input-field color-input" value="#000000">
+                <button class="btn btn-secondary" onclick="document.getElementById('bgUpload').click()">
+                    <i data-lucide="image"></i> Background Image
+                </button>
+                <input type="file" id="bgUpload" hidden accept="image/*">
+                <button class="btn btn-secondary" onclick="clearCanvas()" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+                    <i data-lucide="trash-2"></i> Clear Canvas
+                </button>
+            </div>
+
+            <div class="section-title">Elements</div>
+            <div class="control-group">
+                <button class="btn" onclick="addText()">
+                    <i data-lucide="type"></i> Add Text
+                </button>
+                <button class="btn btn-secondary" onclick="document.getElementById('imgUpload').click()">
+                    <i data-lucide="plus-circle"></i> Add Image
+                </button>
+                <input type="file" id="imgUpload" hidden accept="image/*">
+            </div>
+
+            <div id="textControls" class="control-group" style="display: none; margin-top: 24px;">
+                <div class="section-title">Text Options</div>
+                <input type="text" id="textInput" class="input-field" placeholder="Edit text...">
+                <select id="fontFamily" class="input-field">
+                    <option value="Inter">Inter</option>
+                    <option value="Bebas Neue">Bebas Neue</option>
+                    <option value="Montserrat">Montserrat</option>
+                    <option value="Oswald">Oswald</option>
+                    <option value="Poppins">Poppins</option>
+                    <option value="Outfit">Outfit</option>
+                    <option value="Playfair Display">Playfair Display</option>
+                    <option value="Bangers">Bangers</option>
+                    <option value="Permanent Marker">Permanent Marker</option>
+                    <option value="Roboto">Roboto</option>
+                    <option value="Arial">Arial</option>
+                </select>
+                <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+                    <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-secondary);">
+                        <input type="checkbox" id="textShadow"> Drop Shadow
+                    </label>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <input type="number" id="fontSize" class="input-field" value="60" style="flex: 1;">
+                    <input type="color" id="textColor" class="input-field color-input" value="#ffffff" style="width: 50px;">
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 24px;">Export</div>
+            <div class="control-group">
+                <button class="btn" onclick="exportBanner()">
+                    <i data-lucide="download"></i> Download PNG
+                </button>
+                <div style="font-size: 0.7rem; color: var(--text-secondary); text-align: center;">
+                    Target: 2560 x 1440px | < 6MB
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-area">
+        <div class="canvas-container-wrapper">
+            <div class="canvas-wrapper">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="overlay-controls">
+            <button class="btn btn-secondary" onclick="resetView()" style="padding: 4px 10px; font-size: 0.75rem;">
+                <i data-lucide="maximize"></i> Reset View
+            </button>
+            <div style="width: 1px; height: 16px; background: var(--border-color); margin: 0 8px;"></div>
+            <label class="overlay-control">
+                <input type="checkbox" id="showDesktop" checked> Desktop Area (2560x423)
+            </label>
+            <label class="overlay-control">
+                <input type="checkbox" id="showTablet" checked> Tablet Area (1855x423)
+            </label>
+            <label class="overlay-control">
+                <input type="checkbox" id="showMobile" checked> Safe Area (1546x423)
+            </label>
+        </div>
+    </main>
+
+    <script src="guides.js"></script>
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
