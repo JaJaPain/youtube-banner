@@ -108,8 +108,8 @@ function setupEventListeners() {
         const reader = new FileReader();
         reader.onload = (f) => {
             fabric.Image.fromURL(f.target.result, (img) => {
-                // Scale image to cover canvas
-                const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
+                // Scale image to cover virtual 2560x1440 canvas
+                const scale = Math.max(2560 / img.width, 1440 / img.height);
                 img.set({
                     scaleX: scale,
                     scaleY: scale,
@@ -139,8 +139,13 @@ function setupEventListeners() {
         reader.onload = (f) => {
             fabric.Image.fromURL(f.target.result, (img) => {
                 img.scaleToWidth(400);
+                img.set({
+                    left: 2560 / 2,
+                    top: 1440 / 2,
+                    originX: 'center',
+                    originY: 'center'
+                });
                 canvas.add(img);
-                canvas.centerObject(img);
                 canvas.setActiveObject(img);
                 guides.bringToFront();
             });
@@ -243,6 +248,8 @@ function exportBanner() {
     // Save current view state
     const currentZoom = canvas.getZoom();
     const currentVpt = canvas.viewportTransform.slice();
+    const originalWidth = canvas.getWidth();
+    const originalHeight = canvas.getHeight();
 
     // Hide guides
     const desktopVisible = guides.visible.desktop;
@@ -253,14 +260,15 @@ function exportBanner() {
     guides.toggle('mobile', false);
 
     // Reset zoom for full resolution export
+    canvas.setWidth(2560);
+    canvas.setHeight(1440);
     canvas.setZoom(1);
     canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    canvas.renderAll();
 
     const dataURL = canvas.toDataURL({
         format: 'png',
-        quality: 1,
-        width: 2560,
-        height: 1440
+        quality: 1
     });
 
     const link = document.createElement('a');
@@ -269,6 +277,8 @@ function exportBanner() {
     link.click();
 
     // Restore view state
+    canvas.setWidth(originalWidth);
+    canvas.setHeight(originalHeight);
     canvas.setZoom(currentZoom);
     canvas.setViewportTransform(currentVpt);
     guides.toggle('desktop', desktopVisible);
