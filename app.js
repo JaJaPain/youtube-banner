@@ -299,3 +299,63 @@ function clearCanvas() {
         document.getElementById('bgColor').value = '#000000';
     }
 }
+
+async function generateAIBanner() {
+    const promptInput = document.getElementById('aiPrompt');
+    const prompt = promptInput.value.trim();
+    if (!prompt) {
+        alert('Please enter a prompt first.');
+        return;
+    }
+
+    const btn = document.getElementById('aiBtn');
+    const btnText = document.getElementById('aiBtnText');
+    const originalText = btnText.innerText;
+    
+    // Set loading state
+    btn.disabled = true;
+    btnText.innerText = 'Generating AI Background...';
+    btn.style.opacity = '0.7';
+
+    try {
+        const response = await fetch('http://127.0.0.1:8085/generate-banner', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || 'Failed to generate image');
+        }
+
+        const data = await response.json();
+        
+        fabric.Image.fromURL(data.image, (img) => {
+            // Scale image to cover virtual 2560x1440 canvas
+            const scale = Math.max(2560 / img.width, 1440 / img.height);
+            img.set({
+                scaleX: scale,
+                scaleY: scale,
+                left: 0,
+                top: 0,
+                selectable: false,
+                evented: false,
+                name: 'background'
+            });
+            
+            const oldBg = canvas.getObjects().find(obj => obj.name === 'background');
+            if (oldBg) canvas.remove(oldBg);
+            
+            canvas.insertAt(img, 0);
+            canvas.renderAll();
+        });
+    } catch (error) {
+        alert('Error: ' + error.message);
+    } finally {
+        // Reset state
+        btn.disabled = false;
+        btnText.innerText = originalText;
+        btn.style.opacity = '1';
+    }
+}

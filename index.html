@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Banner Creator</title>
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=4">
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;700&family=Montserrat:wght@800&family=Oswald:wght@700&family=Playfair+Display:wght@700&family=Poppins:wght@400;700&family=Roboto:wght@400;700&family=Bangers&family=Permanent+Marker&family=Outfit:wght@700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -24,6 +24,14 @@
                 <input type="file" id="bgUpload" hidden accept="image/*">
                 <button class="btn btn-secondary" onclick="clearCanvas()" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
                     <i data-lucide="trash-2"></i> Clear Canvas
+                </button>
+            </div>
+
+            <div class="section-title">AI Background</div>
+            <div class="control-group">
+                <textarea id="aiPrompt" class="input-field" placeholder="Describe the background..." rows="2" style="resize: none;"></textarea>
+                <button class="btn" id="aiBtn" onclick="generateAIBanner()">
+                    <i data-lucide="sparkles"></i> <span id="aiBtnText">Generate Background</span>
                 </button>
             </div>
 
@@ -112,8 +120,8 @@
         <span style="font-family: 'Permanent Marker';">preload</span>
     </div>
     
-    <script src="guides.js?v=3"></script>
-    <script src="app.js?v=3"></script>
+    <script src="guides.js?v=4"></script>
+    <script src="app.js?v=4"></script>
     <script>
         lucide.createIcons();
     </script>
