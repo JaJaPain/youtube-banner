@@ -274,7 +274,9 @@ function exportBanner() {
     const link = document.createElement('a');
     link.href = dataURL;
     link.download = 'youtube-banner.png';
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 
     // Restore view state
     canvas.setWidth(originalWidth);
