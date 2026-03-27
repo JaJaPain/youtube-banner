@@ -244,7 +244,7 @@ function onObjectCleared() {
     document.getElementById('textControls').style.display = 'none';
 }
 
-function exportBanner() {
+async function exportBanner() {
     // Save current view state
     var currentZoom = canvas.getZoom();
     var currentVpt = canvas.viewportTransform.slice();
@@ -276,18 +276,62 @@ function exportBanner() {
         String(now.getSeconds()).padStart(2, '0');
     var fileName = 'youtube-banner_' + dateStr + '.png';
 
-    // Use the native HTML canvas toBlob + FileSaver.js for bulletproof saving
+    // Get the blob from the raw canvas
     var rawCanvas = canvas.getElement();
-    rawCanvas.toBlob(function(blob) {
+
+    try {
+        var blob = await new Promise(function(resolve) {
+            rawCanvas.toBlob(function(b) { resolve(b); }, 'image/png');
+        });
+
         if (!blob) {
             alert('Export failed — the canvas may be tainted by cross-origin images.');
             restoreView();
             return;
         }
-        // FileSaver.js handles all browser quirks automatically
-        saveAs(blob, fileName);
+
+        // METHOD 1: Native File System Access API (opens real Windows "Save As" dialog)
+        if (window.showSaveFilePicker) {
+            try {
+                var fileHandle = await window.showSaveFilePicker({
+                    suggestedName: fileName,
+                    types: [{
+                        description: 'PNG Image',
+                        accept: { 'image/png': ['.png'] }
+                    }]
+                });
+                var writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                restoreView();
+                return;
+            } catch (err) {
+                // User cancelled the save dialog — that's fine, just restore
+                if (err.name === 'AbortError') {
+                    restoreView();
+                    return;
+                }
+                // If showSaveFilePicker failed for another reason, fall through to method 2
+                console.warn('showSaveFilePicker failed, falling back:', err);
+            }
+        }
+
+        // METHOD 2: Open image in a new tab so user can right-click > Save As
+        var url = URL.createObjectURL(blob);
+        var newTab = window.open(url, '_blank');
+        if (newTab) {
+            alert('Your banner has opened in a new tab. Right-click the image and select "Save image as..." to save it to your Downloads folder.');
+        } else {
+            // Popup blocker caught it — last resort: replace current page
+            window.location.href = url;
+        }
         restoreView();
-    }, 'image/png');
+
+    } catch (e) {
+        console.error('Export error:', e);
+        alert('Export error: ' + e.message);
+        restoreView();
+    }
 
     function restoreView() {
         canvas.setWidth(originalWidth);
