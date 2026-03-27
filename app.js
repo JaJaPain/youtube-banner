@@ -285,11 +285,12 @@ function exportBanner() {
 
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'youtube-banner.png';
+    const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+    link.download = `youtube-banner-${dateStr}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setTimeout(() => URL.revokeObjectURL(url), 60000); // 60 seconds to allow slow browsers/antivirus to save the file
 
     // Restore view state
     canvas.setWidth(originalWidth);
