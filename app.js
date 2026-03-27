@@ -266,40 +266,47 @@ function exportBanner() {
     canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
     canvas.renderAll();
 
-    const dataURL = canvas.toDataURL({
-        format: 'png',
-        quality: 1
-    });
+    // Use the underlying HTML canvas element's native toBlob for reliable saving
+    const rawCanvas = canvas.getElement();
+    rawCanvas.toBlob(function(blob) {
+        if (!blob) {
+            alert('Export failed. The canvas may contain cross-origin images. Try uploading the AI image manually instead.');
+            restoreView();
+            return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const now = new Date();
+        const dateStr = now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0') + '_' +
+            String(now.getHours()).padStart(2, '0') + '-' +
+            String(now.getMinutes()).padStart(2, '0') + '-' +
+            String(now.getSeconds()).padStart(2, '0');
+        link.download = 'youtube-banner_' + dateStr + '.png';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
 
-    // Convert dataURL to Blob to bypass browser URL length limits (fixes silent download failures)
-    const arr = dataURL.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
+        // Clean up after browser has had time to process
+        setTimeout(function() {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 120000);
+
+        restoreView();
+    }, 'image/png');
+
+    function restoreView() {
+        canvas.setWidth(originalWidth);
+        canvas.setHeight(originalHeight);
+        canvas.setZoom(currentZoom);
+        canvas.setViewportTransform(currentVpt);
+        guides.toggle('desktop', desktopVisible);
+        guides.toggle('tablet', tabletVisible);
+        guides.toggle('mobile', mobileVisible);
     }
-    const blob = new Blob([u8arr], { type: mime });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
-    link.download = `youtube-banner-${dateStr}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 60000); // 60 seconds to allow slow browsers/antivirus to save the file
-
-    // Restore view state
-    canvas.setWidth(originalWidth);
-    canvas.setHeight(originalHeight);
-    canvas.setZoom(currentZoom);
-    canvas.setViewportTransform(currentVpt);
-    guides.toggle('desktop', desktopVisible);
-    guides.toggle('tablet', tabletVisible);
-    guides.toggle('mobile', mobileVisible);
 }
 
 function clearCanvas() {
@@ -347,9 +354,9 @@ async function generateAIBanner() {
 
         const data = await response.json();
         
-        fabric.Image.fromURL(data.image, (img) => {
+        fabric.Image.fromURL(data.image, function(img) {
             // Scale image to cover virtual 2560x1440 canvas
-            const scale = Math.max(2560 / img.width, 1440 / img.height);
+            var scale = Math.max(2560 / img.width, 1440 / img.height);
             img.set({
                 scaleX: scale,
                 scaleY: scale,
@@ -360,12 +367,12 @@ async function generateAIBanner() {
                 name: 'background'
             });
             
-            const oldBg = canvas.getObjects().find(obj => obj.name === 'background');
+            var oldBg = canvas.getObjects().find(function(obj) { return obj.name === 'background'; });
             if (oldBg) canvas.remove(oldBg);
             
             canvas.insertAt(img, 0);
             canvas.renderAll();
-        });
+        }, { crossOrigin: 'anonymous' });
     } catch (error) {
         alert('Error: ' + error.message);
     } finally {
