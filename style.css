@@ -114,6 +114,11 @@ body {
     font-size: 0.9rem;
 }
 
+.input-field option {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+}
+
 .color-input {
     height: 40px;
     padding: 4px;
