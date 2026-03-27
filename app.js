@@ -246,15 +246,15 @@ function onObjectCleared() {
 
 function exportBanner() {
     // Save current view state
-    const currentZoom = canvas.getZoom();
-    const currentVpt = canvas.viewportTransform.slice();
-    const originalWidth = canvas.getWidth();
-    const originalHeight = canvas.getHeight();
+    var currentZoom = canvas.getZoom();
+    var currentVpt = canvas.viewportTransform.slice();
+    var originalWidth = canvas.getWidth();
+    var originalHeight = canvas.getHeight();
 
     // Hide guides
-    const desktopVisible = guides.visible.desktop;
-    const tabletVisible = guides.visible.tablet;
-    const mobileVisible = guides.visible.mobile;
+    var desktopVisible = guides.visible.desktop;
+    var tabletVisible = guides.visible.tablet;
+    var mobileVisible = guides.visible.mobile;
     guides.toggle('desktop', false);
     guides.toggle('tablet', false);
     guides.toggle('mobile', false);
@@ -266,35 +266,26 @@ function exportBanner() {
     canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
     canvas.renderAll();
 
-    // Use the underlying HTML canvas element's native toBlob for reliable saving
-    const rawCanvas = canvas.getElement();
+    // Build a timestamped filename
+    var now = new Date();
+    var dateStr = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0') + '_' +
+        String(now.getHours()).padStart(2, '0') + '-' +
+        String(now.getMinutes()).padStart(2, '0') + '-' +
+        String(now.getSeconds()).padStart(2, '0');
+    var fileName = 'youtube-banner_' + dateStr + '.png';
+
+    // Use the native HTML canvas toBlob + FileSaver.js for bulletproof saving
+    var rawCanvas = canvas.getElement();
     rawCanvas.toBlob(function(blob) {
         if (!blob) {
-            alert('Export failed. The canvas may contain cross-origin images. Try uploading the AI image manually instead.');
+            alert('Export failed — the canvas may be tainted by cross-origin images.');
             restoreView();
             return;
         }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        const now = new Date();
-        const dateStr = now.getFullYear() + '-' +
-            String(now.getMonth() + 1).padStart(2, '0') + '-' +
-            String(now.getDate()).padStart(2, '0') + '_' +
-            String(now.getHours()).padStart(2, '0') + '-' +
-            String(now.getMinutes()).padStart(2, '0') + '-' +
-            String(now.getSeconds()).padStart(2, '0');
-        link.download = 'youtube-banner_' + dateStr + '.png';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-
-        // Clean up after browser has had time to process
-        setTimeout(function() {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        }, 120000);
-
+        // FileSaver.js handles all browser quirks automatically
+        saveAs(blob, fileName);
         restoreView();
     }, 'image/png');
 
