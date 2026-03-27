@@ -271,12 +271,25 @@ function exportBanner() {
         quality: 1
     });
 
+    // Convert dataURL to Blob to bypass browser URL length limits (fixes silent download failures)
+    const arr = dataURL.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    const blob = new Blob([u8arr], { type: mime });
+    const url = URL.createObjectURL(blob);
+
     const link = document.createElement('a');
-    link.href = dataURL;
+    link.href = url;
     link.download = 'youtube-banner.png';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 
     // Restore view state
     canvas.setWidth(originalWidth);
