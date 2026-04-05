@@ -1,6 +1,17 @@
 let canvas;
 let guides;
 
+window.cycleFont = function(direction) {
+    const select = document.getElementById('fontFamily');
+    let idx = select.selectedIndex + direction;
+    if (idx < 0) idx = select.options.length - 1;
+    if (idx >= select.options.length) idx = 0;
+    select.selectedIndex = idx;
+    
+    // Trigger the change event manually to update the canvas
+    select.dispatchEvent(new Event('change'));
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     initCanvas();
     setupEventListeners();
@@ -186,22 +197,111 @@ function setupEventListeners() {
         }
     });
 
+    function updateShadow() {
+        const active = canvas.getActiveObject();
+        if (active && active.type === 'i-text' && document.getElementById('textShadow').checked) {
+            active.set('shadow', new fabric.Shadow({
+                color: document.getElementById('shadowColor').value,
+                blur: parseInt(document.getElementById('shadowBlur').value) || 0,
+                offsetX: parseInt(document.getElementById('shadowOffsetX').value) || 0,
+                offsetY: parseInt(document.getElementById('shadowOffsetY').value) || 0
+            }));
+            canvas.renderAll();
+        }
+    }
+
     document.getElementById('textShadow').addEventListener('change', (e) => {
         const active = canvas.getActiveObject();
-        if (active && active.type === 'i-text') {
-            if (e.target.checked) {
-                active.set('shadow', new fabric.Shadow({
-                    color: 'rgba(0,0,0,0.6)',
-                    blur: 15,
-                    offsetX: 8,
-                    offsetY: 8
-                }));
-            } else {
+        const config = document.getElementById('shadowConfig');
+        if (e.target.checked) {
+            config.style.display = 'flex';
+            updateShadow();
+        } else {
+            config.style.display = 'none';
+            if (active && active.type === 'i-text') {
                 active.set('shadow', null);
+                canvas.renderAll();
             }
+        }
+    });
+
+    document.getElementById('shadowColor').addEventListener('input', updateShadow);
+    document.getElementById('shadowBlur').addEventListener('input', updateShadow);
+    document.getElementById('shadowOffsetX').addEventListener('input', updateShadow);
+    document.getElementById('shadowOffsetY').addEventListener('input', updateShadow);
+
+    // Text Border
+    document.getElementById('textBorder').addEventListener('change', (e) => {
+        const active = canvas.getActiveObject();
+        const config = document.getElementById('borderConfig');
+        if (e.target.checked) {
+            config.style.display = 'flex';
+            if (active && active.type === 'i-text') {
+                active.set({
+                    stroke: document.getElementById('textBorderColor').value,
+                    strokeWidth: parseInt(document.getElementById('textBorderWidth').value),
+                    paintFirst: 'stroke' // Puts stroke outside the fill
+                });
+                canvas.renderAll();
+            }
+        } else {
+            config.style.display = 'none';
+            if (active && active.type === 'i-text') {
+                active.set({ stroke: null, strokeWidth: 0 });
+                canvas.renderAll();
+            }
+        }
+    });
+
+    document.getElementById('textBorderColor').addEventListener('input', (e) => {
+        const active = canvas.getActiveObject();
+        if (active && active.type === 'i-text' && document.getElementById('textBorder').checked) {
+            active.set('stroke', e.target.value);
             canvas.renderAll();
         }
     });
+
+    document.getElementById('textBorderWidth').addEventListener('input', (e) => {
+        const active = canvas.getActiveObject();
+        if (active && active.type === 'i-text' && document.getElementById('textBorder').checked) {
+            active.set('strokeWidth', parseInt(e.target.value));
+            canvas.renderAll();
+        }
+    });
+
+    // Text Image Fill
+    document.getElementById('textFillUpload').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (f) => {
+            const active = canvas.getActiveObject();
+            if (active && active.type === 'i-text') {
+                fabric.Image.fromURL(f.target.result, (img) => {
+                    const pattern = new fabric.Pattern({
+                        source: img.getElement(),
+                        repeat: 'repeat'
+                    });
+                    active.set('fill', pattern);
+                    document.getElementById('removeTextFillBtn').style.display = 'block';
+                    canvas.renderAll();
+                });
+            }
+            e.target.value = ''; // Reset
+        };
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('removeTextFillBtn').addEventListener('click', () => {
+        const active = canvas.getActiveObject();
+        if (active && active.type === 'i-text') {
+            const color = document.getElementById('textColor').value;
+            active.set('fill', color);
+            document.getElementById('removeTextFillBtn').style.display = 'none';
+            canvas.renderAll();
+        }
+    });
+
 
     // Guide toggles
     document.getElementById('showDesktop').addEventListener('change', (e) => { guides.toggle('desktop', e.target.checked); checkThumbnailDisabled(e.target); });
@@ -264,8 +364,39 @@ function onObjectSelected(e) {
         document.getElementById('textInput').value = obj.text;
         document.getElementById('fontSize').value = obj.fontSize;
         document.getElementById('fontFamily').value = obj.fontFamily;
-        document.getElementById('textColor').value = obj.fill;
-        document.getElementById('textShadow').checked = !!obj.shadow;
+        
+        // Restore Shadow UI
+        const hasShadow = !!obj.shadow;
+        document.getElementById('textShadow').checked = hasShadow;
+        if (hasShadow) {
+            document.getElementById('shadowConfig').style.display = 'flex';
+            document.getElementById('shadowColor').value = obj.shadow.color || '#000000';
+            document.getElementById('shadowBlur').value = obj.shadow.blur || 0;
+            document.getElementById('shadowOffsetX').value = obj.shadow.offsetX || 0;
+            document.getElementById('shadowOffsetY').value = obj.shadow.offsetY || 0;
+        } else {
+            document.getElementById('shadowConfig').style.display = 'none';
+        }
+        
+        // Restore Fill / Pattern UI
+        if (obj.fill instanceof fabric.Pattern) {
+            document.getElementById('removeTextFillBtn').style.display = 'block';
+            // Leave textColor picker as is, it shouldn't overwrite the pattern unless toggled
+        } else {
+            document.getElementById('textColor').value = obj.fill;
+            document.getElementById('removeTextFillBtn').style.display = 'none';
+        }
+
+        // Restore Border UI
+        const hasBorder = !!obj.strokeWidth && obj.strokeWidth > 0;
+        document.getElementById('textBorder').checked = hasBorder;
+        if (hasBorder) {
+            document.getElementById('borderConfig').style.display = 'flex';
+            document.getElementById('textBorderColor').value = obj.stroke;
+            document.getElementById('textBorderWidth').value = obj.strokeWidth;
+        } else {
+            document.getElementById('borderConfig').style.display = 'none';
+        }
     } else {
         document.getElementById('textControls').style.display = 'none';
     }

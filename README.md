@@ -4,8 +4,11 @@ I have built a premium, web-based YouTube Banner Creator that allows you to desi
 
 ## Features
 
-- **Precise Safe Zones**: Visual overlays for TV (2560x1440), Desktop (2560x423), Tablet (1855x423), and Mobile/Text Safe Area (1546x423).
-- **Text Manipulation**: 10+ Premium Fonts (Bebas Neue, Playfair Display, Poppins, etc.), adjustable size, color, and **Drop Shadow** effects.
+- **Advanced Text Manipulation**: 
+    - 15+ Premium Fonts quickly accessed via cycling buttons.
+    - Advanced **Drop Shadows** with precise blur and X/Y offset sliders.
+    - Custom **Border Outlines** around text of any thickness and color.
+    - **Image Pattern Fills**: Upload an image to map directly as the core texture of your font!
 - **Image Management**: Upload background images and individual elements to add to your banner.
 - **AI Background Generation**:
     - Write a prompt to magically spin up highly detailed backgrounds instantly.

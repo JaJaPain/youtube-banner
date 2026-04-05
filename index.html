@@ -61,35 +61,91 @@
             <div id="textControls" class="control-group" style="display: none; margin-top: 24px;">
                 <div class="section-title">Text Options</div>
                 <input type="text" id="textInput" class="input-field" placeholder="Edit text...">
-                <select id="fontFamily" class="input-field">
-                    <option value="Inter">Inter</option>
-                    <option value="Bebas Neue">Bebas Neue</option>
-                    <option value="Anton">Anton</option>
-                    <option value="Archivo Black">Archivo Black</option>
-                    <option value="Knewave">Knewave</option>
-                    <option value="Montserrat">Montserrat</option>
-                    <option value="Syne">Syne</option>
-                    <option value="Cormorant Garamond">Cormorant Garamond</option>
-                    <option value="Raleway">Raleway</option>
-                    <option value="Oswald">Oswald</option>
-                    <option value="Poppins">Poppins</option>
-                    <option value="Outfit">Outfit</option>
-                    <option value="Playfair Display">Playfair Display</option>
-                    <option value="Luckiest Guy">Luckiest Guy</option>
-                    <option value="Bangers">Bangers</option>
-                    <option value="Permanent Marker">Permanent Marker</option>
-                    <option value="Space Grotesk">Space Grotesk</option>
-                    <option value="Roboto">Roboto</option>
-                    <option value="Arial">Arial</option>
-                </select>
+                <div style="display: flex; gap: 4px; align-items: stretch; margin-top: 8px;">
+                    <select id="fontFamily" class="input-field" style="flex: 1; margin: 0;">
+                        <option value="Inter">Inter</option>
+                        <option value="Bebas Neue">Bebas Neue</option>
+                        <option value="Anton">Anton</option>
+                        <option value="Archivo Black">Archivo Black</option>
+                        <option value="Knewave">Knewave</option>
+                        <option value="Montserrat">Montserrat</option>
+                        <option value="Syne">Syne</option>
+                        <option value="Cormorant Garamond">Cormorant Garamond</option>
+                        <option value="Raleway">Raleway</option>
+                        <option value="Oswald">Oswald</option>
+                        <option value="Poppins">Poppins</option>
+                        <option value="Outfit">Outfit</option>
+                        <option value="Playfair Display">Playfair Display</option>
+                        <option value="Luckiest Guy">Luckiest Guy</option>
+                        <option value="Bangers">Bangers</option>
+                        <option value="Permanent Marker">Permanent Marker</option>
+                        <option value="Space Grotesk">Space Grotesk</option>
+                        <option value="Roboto">Roboto</option>
+                        <option value="Arial">Arial</option>
+                    </select>
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <button class="btn btn-secondary" onclick="cycleFont(-1)" style="padding: 0 4px; flex: 1; min-height: 0;" title="Previous Font">
+                            <i data-lucide="chevron-up" style="width: 14px; height: 14px;"></i>
+                        </button>
+                        <button class="btn btn-secondary" onclick="cycleFont(1)" style="padding: 0 4px; flex: 1; min-height: 0;" title="Next Font">
+                            <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
+                        </button>
+                    </div>
+                </div>
                 <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
                     <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-secondary);">
                         <input type="checkbox" id="textShadow"> Drop Shadow
                     </label>
+                    <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-secondary);">
+                        <input type="checkbox" id="textBorder"> Border
+                    </label>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <input type="number" id="fontSize" class="input-field" value="60" style="flex: 1;">
-                    <input type="color" id="textColor" class="input-field color-input" value="#ffffff" style="width: 50px;">
+                
+                <!-- Drop Shadow Config -->
+                <div id="shadowConfig" style="display: none; flex-direction: column; gap: 4px; margin-top: 6px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.65rem; color: var(--primary-color); text-transform: uppercase; font-weight: bold; margin-bottom: 2px;">Shadow Settings</div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="color" id="shadowColor" class="input-field color-input" value="#000000" style="width: 30px; height: 30px; padding: 0;" title="Shadow Color">
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem;">
+                                <span style="width: 45px;">Blur</span>
+                                <input type="range" id="shadowBlur" min="0" max="50" value="15" style="flex: 1;">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem;">
+                                <span style="width: 45px;">Offset X</span>
+                                <input type="range" id="shadowOffsetX" min="-50" max="50" value="8" style="flex: 1;">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem;">
+                                <span style="width: 45px;">Offset Y</span>
+                                <input type="range" id="shadowOffsetY" min="-50" max="50" value="8" style="flex: 1;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Border Config -->
+                <div id="borderConfig" style="display: none; flex-direction: column; gap: 4px; margin-top: 6px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.65rem; color: var(--primary-color); text-transform: uppercase; font-weight: bold; margin-bottom: 2px;">Border Settings</div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="color" id="textBorderColor" class="input-field color-input" value="#000000" style="width: 30px; height: 30px; padding: 0;" title="Border Color">
+                        <div style="flex: 1; display: flex; align-items: center; gap: 6px; font-size: 0.7rem;">
+                            <span style="width: 45px;">Size</span>
+                            <input type="range" id="textBorderWidth" min="1" max="30" value="5" style="flex: 1;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center;">
+                    <input type="number" id="fontSize" class="input-field" value="60" style="width: 70px;" title="Font Size">
+                    <input type="color" id="textColor" class="input-field color-input" value="#ffffff" style="width: 50px;" title="Text Color">
+                    
+                    <button class="btn btn-secondary" onclick="document.getElementById('textFillUpload').click()" style="padding: 4px 8px; font-size: 0.75rem;" title="Upload Image Pattern for Text">
+                        <i data-lucide="image"></i> Fill
+                    </button>
+                    <input type="file" id="textFillUpload" hidden accept="image/*">
+                    <button id="removeTextFillBtn" class="btn btn-secondary" style="display: none; padding: 4px 8px; font-size: 0.75rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.2);" title="Remove Pattern">
+                        <i data-lucide="trash-2"></i>
+                    </button>
                 </div>
             </div>
 
