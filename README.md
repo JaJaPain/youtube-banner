@@ -34,7 +34,7 @@ I have built a premium, web-based YouTube Banner Creator that allows you to desi
 
 ## Demo
 
-![Final App Screenshot](/C:/Users/abejh/.gemini/antigravity/brain/e0389b9c-fa65-4df4-a626-b27d0f7eaa9b/demo_screenshot.png)
+![Final App Screenshot](screenshot.png)
 
 ## Verification Results
 
