@@ -31,6 +31,17 @@
             <div class="section-title">AI Background</div>
             <div class="control-group">
                 <textarea id="aiPrompt" class="input-field" placeholder="Describe the background..." rows="2" style="resize: none;"></textarea>
+                
+                <div style="margin: 8px 0;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
+                        <input type="checkbox" id="useLocalModelToggle" onchange="toggleLocalModel()">
+                        <span>Use Local AI Model (Fast, requires GPU)</span>
+                    </label>
+                    <div id="localModelWarning" style="display: none; font-size: 0.75rem; color: #f59e0b; margin-top: 6px;">
+                        Warning: Loading the AI model into memory for the first time will take 10-30 seconds depending on your hardware.
+                    </div>
+                </div>
+
                 <button class="btn" id="aiBtn" onclick="generateAIBanner()">
                     <i data-lucide="sparkles"></i> <span id="aiBtnText">Generate Background</span>
                 </button>
@@ -84,10 +95,10 @@
 
             <div class="section-title" style="margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 24px;">Export</div>
             <div class="control-group">
-                <button class="btn" onclick="exportBanner()">
-                    <i data-lucide="download"></i> Download PNG
+                <button class="btn" id="exportBtn" onclick="exportBanner()">
+                    <i data-lucide="download"></i> <span id="exportBtnText">Download PNG</span>
                 </button>
-                <div style="font-size: 0.7rem; color: var(--text-secondary); text-align: center;">
+                <div id="exportHint" style="font-size: 0.7rem; color: var(--text-secondary); text-align: center;">
                     Target: 2560 x 1440px | < 6MB
                 </div>
             </div>
@@ -114,6 +125,10 @@
             </label>
             <label class="overlay-control">
                 <input type="checkbox" id="showMobile" checked> Safe Area (1546x423)
+            </label>
+            <div style="width: 1px; height: 16px; background: var(--border-color); margin: 0 8px;"></div>
+            <label class="overlay-control" style="color: var(--primary-color);">
+                <input type="checkbox" id="isThumbnail"> Thumbnail Mode
             </label>
         </div>
     </main>

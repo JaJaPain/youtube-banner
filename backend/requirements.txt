@@ -8,3 +8,4 @@ bitsandbytes
 pydantic
 pillow
 python-multipart
+torchvision

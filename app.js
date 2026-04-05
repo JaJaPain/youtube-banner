@@ -204,9 +204,40 @@ function setupEventListeners() {
     });
 
     // Guide toggles
-    document.getElementById('showDesktop').addEventListener('change', (e) => guides.toggle('desktop', e.target.checked));
-    document.getElementById('showTablet').addEventListener('change', (e) => guides.toggle('tablet', e.target.checked));
-    document.getElementById('showMobile').addEventListener('change', (e) => guides.toggle('mobile', e.target.checked));
+    document.getElementById('showDesktop').addEventListener('change', (e) => { guides.toggle('desktop', e.target.checked); checkThumbnailDisabled(e.target); });
+    document.getElementById('showTablet').addEventListener('change', (e) => { guides.toggle('tablet', e.target.checked); checkThumbnailDisabled(e.target); });
+    document.getElementById('showMobile').addEventListener('change', (e) => { guides.toggle('mobile', e.target.checked); checkThumbnailDisabled(e.target); });
+
+    document.getElementById('isThumbnail').addEventListener('change', (e) => {
+        const isThumb = e.target.checked;
+        if (isThumb) {
+            // Uncheck other guides
+            document.getElementById('showDesktop').checked = false;
+            document.getElementById('showTablet').checked = false;
+            document.getElementById('showMobile').checked = false;
+            guides.toggle('desktop', false);
+            guides.toggle('tablet', false);
+            guides.toggle('mobile', false);
+            
+            // Update export hints
+            document.getElementById('exportHint').innerText = 'Target: 1280 x 720px | < 2MB';
+            document.getElementById('exportBtnText').innerText = 'Download PNG';
+        } else {
+            document.getElementById('exportHint').innerText = 'Target: 2560 x 1440px | < 6MB';
+            document.getElementById('exportBtnText').innerText = 'Download PNG';
+        }
+    });
+
+    function checkThumbnailDisabled(target) {
+        if (target.checked) {
+            const thumb = document.getElementById('isThumbnail');
+            if (thumb.checked) {
+                thumb.checked = false;
+                document.getElementById('exportHint').innerText = 'Target: 2560 x 1440px | < 6MB';
+                document.getElementById('exportBtnText').innerText = 'Download PNG';
+            }
+        }
+    }
 }
 
 function addText() {
@@ -259,11 +290,20 @@ async function exportBanner() {
     guides.toggle('tablet', false);
     guides.toggle('mobile', false);
 
+    // Check if thumbnail mode is active
+    var isThumb = document.getElementById('isThumbnail').checked;
+    
     // Reset zoom for full resolution export
-    canvas.setWidth(2560);
-    canvas.setHeight(1440);
-    canvas.setZoom(1);
-    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    canvas.setWidth(isThumb ? 1280 : 2560);
+    canvas.setHeight(isThumb ? 720 : 1440);
+    if (isThumb) {
+        // We zoom to 0.5 because the original elements are placed for 2560x1440
+        canvas.setZoom(0.5);
+    } else {
+        canvas.setZoom(1);
+    }
+    
+    canvas.setViewportTransform([isThumb ? 0.5 : 1, 0, 0, isThumb ? 0.5 : 1, 0, 0]);
     canvas.renderAll();
 
     // Build a timestamped filename
@@ -274,14 +314,19 @@ async function exportBanner() {
         String(now.getHours()).padStart(2, '0') + '-' +
         String(now.getMinutes()).padStart(2, '0') + '-' +
         String(now.getSeconds()).padStart(2, '0');
-    var fileName = 'youtube-banner_' + dateStr + '.png';
+    var ext = '.png';
+    var mime = 'image/png';
+    var quality = 1.0;
+    
+    var prefix = isThumb ? 'youtube-thumbnail_' : 'youtube-banner_';
+    var fileName = prefix + dateStr + ext;
 
     // Get the blob from the raw canvas
     var rawCanvas = canvas.getElement();
 
     try {
         var blob = await new Promise(function(resolve) {
-            rawCanvas.toBlob(function(b) { resolve(b); }, 'image/png');
+            rawCanvas.toBlob(function(b) { resolve(b); }, mime, quality);
         });
 
         if (!blob) {
@@ -297,7 +342,7 @@ async function exportBanner() {
                     suggestedName: fileName,
                     types: [{
                         description: 'PNG Image',
-                        accept: { 'image/png': ['.png'] }
+                        accept: { [mime]: [ext] }
                     }]
                 });
                 var writable = await fileHandle.createWritable();
@@ -358,6 +403,41 @@ function clearCanvas() {
     }
 }
 
+async function toggleLocalModel() {
+    const toggle = document.getElementById('useLocalModelToggle');
+    const warning = document.getElementById('localModelWarning');
+    const btn = document.getElementById('aiBtn');
+    
+    if (toggle.checked) {
+        warning.style.display = 'block';
+        warning.style.color = '#f59e0b'; // orange
+        warning.innerText = "Please wait... Go grab a cup of coffee, I'll turn green and let you know when your model is loaded into VRAM.";
+        btn.disabled = true;
+        
+        try {
+            const response = await fetch('http://127.0.0.1:8085/api/load-model', {
+                method: 'POST'
+            });
+            if (!response.ok) {
+                throw new Error('Failed to load local model');
+            }
+            warning.style.color = '#10b981'; // green
+            warning.innerText = 'Model loaded successfully! Fast generation is now active.';
+        } catch (e) {
+            console.error(e);
+            warning.style.color = '#ef4444'; // red
+            warning.innerText = 'Error loading local model. Falling back to cloud.';
+            toggle.checked = false;
+        } finally {
+            btn.disabled = false;
+        }
+    } else {
+        warning.style.display = 'none';
+        // if they uncheck it, backend might still have it loaded, but next requests will just use it. 
+        // We could implement an unload endpoint, but let's leave it in memory for now.
+    }
+}
+
 async function generateAIBanner() {
     const promptInput = document.getElementById('aiPrompt');
     const prompt = promptInput.value.trim();
@@ -374,6 +454,27 @@ async function generateAIBanner() {
     btn.disabled = true;
     btnText.innerText = 'Generating AI Background...';
     btn.style.opacity = '0.7';
+
+    // Show progress meter area if local mode might be active
+    const warning = document.getElementById('localModelWarning');
+    const toggle = document.getElementById('useLocalModelToggle');
+    let progressInterval = null;
+    
+    if (toggle.checked) {
+        warning.style.display = 'block';
+        warning.style.color = '#3b82f6'; // blue
+        warning.innerText = 'Generating image: 0%...';
+        
+        progressInterval = setInterval(async () => {
+            try {
+                const r = await fetch('http://127.0.0.1:8085/api/generation-progress');
+                if (r.ok) {
+                    const pd = await r.json();
+                    warning.innerText = `Generating image: ${pd.progress}%...`;
+                }
+            } catch (e) {}
+        }, 500);
+    }
 
     try {
         const response = await fetch('http://127.0.0.1:8085/generate-banner', {
@@ -408,9 +509,19 @@ async function generateAIBanner() {
             canvas.insertAt(img, 0);
             canvas.renderAll();
         }, { crossOrigin: 'anonymous' });
+        
+        if (toggle.checked) {
+            warning.style.color = '#10b981'; // green
+            warning.innerText = 'Generation complete! Model loaded and ready.';
+        }
     } catch (error) {
         alert('Error: ' + error.message);
+        if (toggle.checked) {
+            warning.style.color = '#10b981'; // green
+            warning.innerText = 'Model loaded successfully! Fast generation is now active.';
+        }
     } finally {
+        if (progressInterval) clearInterval(progressInterval);
         // Reset state
         btn.disabled = false;
         btnText.innerText = originalText;
