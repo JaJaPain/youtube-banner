@@ -29,4 +29,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.toggleLocalModel = () => aiManager.toggleLocalModel();
     window.loadSelectedLocalModel = () => aiManager.loadSelectedLocalModel();
     window.resetView = () => canvasManager.resetView();
+    // Expose uiManager globally for HTML buttons
+    window.uiManager = uiManager;
+
+    // Global keyboard listeners
+    document.addEventListener('keydown', (e) => {
+        // Prevent deletion if the user is typing in an input or textarea
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            uiManager.deleteSelected();
+        }
+    });
 });
