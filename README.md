@@ -1,46 +1,63 @@
-# YouTube Banner Creator Walkthrough
+# YouTube Banner Creator - Premium Suite
 
-I have built a premium, web-based YouTube Banner Creator that allows you to design high-quality banners with precise safe-zone guides.
+A professional, high-performance web application designed for creating stunned YouTube banners (2560x1440) and thumbnails. This suite features a modularized architecture, offline-first AI generation capabilities, and a robust undo/redo history system.
 
-## Features
+## 🚀 Key Features
 
-- **Advanced Text Manipulation**: 
-    - 15+ Premium Fonts quickly accessed via cycling buttons.
-    - Advanced **Drop Shadows** with precise blur and X/Y offset sliders.
-    - Custom **Border Outlines** around text of any thickness and color.
-    - **Image Pattern Fills**: Upload an image to map directly as the core texture of your font!
-- **Image Management**: Upload background images and individual elements to add to your banner.
-- **AI Background Generation**:
-    - Write a prompt to magically spin up highly detailed backgrounds instantly.
-    - **Local GPU Execution**: By toggling "Use Local AI Model", the app loads the highly compressed `FLUX.1-schnell-bnb-nf4` directly to your local GPU.
-    - Keeps the entire model entirely loaded in 11.4GB VRAM preventing System RAM swap crashes, producing background generations in under 10 seconds.
-    - Live on-screen generation progress polling directly to the frontend interface.
-- **Premium UI**: Sleek dark mode with glassmorphism effects and micro-animations.
-- **Direct Export**: Download your final design directly as a 2560x1440 PNG, ready for YouTube.
+### 🎨 Advanced Design Tools
+- **Rich Text Engine**: 
+    - 15+ Premium fonts with instant cycling.
+    - Advanced **Drop Shadows** (Blur, X/Y Offset).
+    - Dynamic **Border Outlines** (Thickness & Color).
+    - **Image Pattern Fills**: Map any uploaded image directly onto your text characters.
 - **Canvas Navigation**: 
-    - **Zoom**: Use your mouse wheel to zoom in and out.
-    - **Pan**: Hold **Alt** (or **Shift**) and drag with your mouse to move the canvas around.
-    - **Reset**: Click the **Reset View** button to center the banner.
+    - **Zooming**: Smooth mouse wheel zoom or keyboard `+`/`-` keys.
+    - **Panning**: Middle-mouse button drag, Arrow Keys, or Alt/Shift+Drag.
+    - **Reset View**: Instant centering and scaling of the banner viewport.
+- **Safe Zone Guides**: Precise overlays for Mobile, Tablet, and Desktop "Safe Areas" to ensure your design looks perfect on every device.
 
-## How to use
+### 🤖 Local & Cloud AI Generation
+- **Dual Local GPU Models**: Choose your power level based on your hardware:
+    - **FLUX.1 Schnell**: State-of-the-art geometry and text spelling (Requires ~12GB VRAM).
+    - **SDXL Lightning**: Ultra-fast 4-step generation for rapid iteration (Requires ~8GB VRAM).
+- **Performance Optimized**: Uses `local_files_only` logic to bypass Hugging Face network stalls, resulting in near-instant model loading from disk. 
+- **Safety First**: VRAM is automatically flushed during model swaps, and the generation button is locked until the model is confirmed active in memory.
+- **Cloud Fallback**: Automatically falls back to high-quality cloud inference if no local GPU is detected.
 
-1. Double-click `run_app.bat` to automatically initialize the local Python backend server and launch the app in your default browser.
-2. Use the **Background** section to set a solid color or upload a background image.
-3. Or type a description into the **AI Background** section and use either cloud or fully offline GPU-powered logic to generate stunning backdrops.
-4. Add text or additional images using the **Elements** section.
-5. Select any text to reveal **Text Options** in the sidebar.
-6. Use the **Overlays** at the bottom to toggle safe zone guides.
-7. Click **Download PNG** to save your banner.
+### 🛠 Technical Excellence
+- **Modular Frontend**: Refactored into discrete managers (`CanvasManager`, `UIManager`, `AIManager`, `HistoryManager`) for high maintainability.
+- **Undo/Redo System**: Robust command-pattern history tracking for every action (adding elements, moving, resizing, coloring). 
+    - Accessible via UI buttons or standard `Ctrl+Z` / `Ctrl+Y`.
+- **High-Res Export**: Generates a flattened 2560x1440 PNG with one click, perfectly sized for YouTube's upload requirements.
 
-## Demo
+## 📦 Installation & Setup
 
-![Final App Screenshot](Screenshot.png)
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/JaJaPain/youtube-banner.git
+   ```
+2. **Environment Setup**:
+   - Ensure you have **Python 3.10+** installed.
+   - The app automatically creates a virtual environment on first run.
+3. **Launch**:
+   - Simply double-click `run_app.bat`. This will:
+     - Initialize the FastAPI backend.
+     - Detect your GPU and prepare the local environment.
+     - Launch the frontend in your default browser.
 
-## Verification Results
+## 📖 How to Use
 
-The app was tested using a local server and browser subagent:
-- [x] Professional dark theme loaded correctly.
-- [x] Canvas guides for all devices displayed accurately at center.
-- [x] Text addition and real-time editing verified.
-- [x] Font switching (Google Fonts) and color picking verified.
-- [x] Export functionality successfully triggered a PNG download at 2560x1440.
+1. **Set your Background**: Use a solid color, upload an image, or describe your vision in the **AI Background** box.
+2. **Pick your AI Model**: If using a local GPU, select your model from the dropdown and hit **Load Selected Model**.
+3. **Add Elements**: Create text blocks or upload foreground images/logos.
+4. **Style**: Click any element to reveal the dynamic styling sidebar. Adjust fonts, patterns, and shadows in real-time.
+5. **Preview**: Toggle the **Overlays** at the bottom to ensure your text stays within the "Safe Area" for mobile viewers.
+6. **Download**: Click **Download PNG** to save your high-resolution masterpiece.
+
+## 🧪 Requirements
+- **OS**: Windows (tested)
+- **GPU (for Local AI)**: NVIDIA RTX series (8GB+ VRAM recommended for SDXL, 12GB+ for FLUX).
+- **Backend Dependencies**: `fastapi`, `diffusers`, `torch`, `peft`, `transformers`, `accelerate`.
+
+---
+*Built with ❤️ for Creators.*

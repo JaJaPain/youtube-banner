@@ -26,8 +26,8 @@ model_type = "none"
 generation_progress = 0
 
 
-def try_load_local_model():
-    """Try to load FLUX.1 Schnell NF4 on GPU. Falls back gracefully."""
+def try_load_local_model(requested_model="flux"):
+    """Try to load FLUX or SDXL Lightning on GPU. Falls back gracefully."""
     global pipe, model_type
     try:
         import torch
@@ -39,24 +39,58 @@ def try_load_local_model():
         vram_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
         print(f"GPU Detected: {gpu_name} ({vram_gb:.1f} GB VRAM)")
 
-        from diffusers import FluxPipeline
+        if requested_model == "sdxl":
+            from diffusers import StableDiffusionXLPipeline, EulerDiscreteScheduler
+            print("Loading SDXL Lightning...")
+            print("(First run will download components to D:\\hf_cache — subsequent runs are instant)")
 
-        model_id = "magespace/FLUX.1-schnell-bnb-nf4"
-        print(f"Loading {model_id}...")
-        print("(First run will download ~8 GB to D:\\hf_cache — subsequent runs are instant)")
+            try:
+                pipe = StableDiffusionXLPipeline.from_pretrained(
+                    "stabilityai/stable-diffusion-xl-base-1.0",
+                    torch_dtype=torch.float16,
+                    variant="fp16",
+                    local_files_only=True
+                )
+            except Exception:
+                # If local files aren't found, drop the flag to allow downloading
+                pipe = StableDiffusionXLPipeline.from_pretrained(
+                    "stabilityai/stable-diffusion-xl-base-1.0",
+                    torch_dtype=torch.float16,
+                    variant="fp16"
+                )
 
-        pipe = FluxPipeline.from_pretrained(
-            model_id,
-            torch_dtype=torch.bfloat16
-        )
-        # We will keep the model entirely on your 12GB VRAM so it doesn't overflow your system RAM
-        pipe.to("cuda")
-        model_type = "flux-local"
-        print("FLUX model loaded successfully on GPU!")
+            pipe.load_lora_weights("ByteDance/SDXL-Lightning", weight_name="sdxl_lightning_4step_lora.safetensors")
+            pipe.scheduler = EulerDiscreteScheduler.from_config(pipe.scheduler.config, timestep_spacing="trailing")
+            pipe.to("cuda")
+            model_type = "sdxl"
+            print("SDXL Lightning loaded successfully on GPU!")
+
+        else: # Default to FLUX
+            from diffusers import FluxPipeline
+            model_id = "magespace/FLUX.1-schnell-bnb-nf4"
+            print(f"Loading {model_id}...")
+            print("(First run will download ~8 GB to D:\\hf_cache — subsequent runs are instant)")
+
+            try:
+                pipe = FluxPipeline.from_pretrained(
+                    model_id,
+                    torch_dtype=torch.bfloat16,
+                    local_files_only=True
+                )
+            except Exception:
+                pipe = FluxPipeline.from_pretrained(
+                    model_id,
+                    torch_dtype=torch.bfloat16
+                )
+            # We will keep the model entirely on your 12GB VRAM so it doesn't overflow your system RAM
+            pipe.to("cuda")
+            model_type = "flux"
+            print("FLUX model loaded successfully on GPU!")
 
     except Exception as e:
         print(f"Local model load failed: {e}")
         pipe = None
+        model_type = "cloud-api"
 
 
 @asynccontextmanager
@@ -90,6 +124,9 @@ app.add_middleware(
 
 class GenerateRequest(BaseModel):
     prompt: str
+
+class LoadModelRequest(BaseModel):
+    model_type: str = "flux"
 
 
 async def generate_via_cloud(prompt: str) -> bytes:
@@ -133,17 +170,27 @@ async def generate_via_cloud(prompt: str) -> bytes:
 
 
 @app.post("/api/load-model")
-def load_model_endpoint():
+async def load_model_endpoint(req: LoadModelRequest):
     global pipe, model_type
-    if pipe is not None:
+    model_pick = req.model_type if req else "flux"
+
+    if pipe is not None and model_type == model_pick:
         return {"status": "already loaded", "model_type": model_type}
     
-    try_load_local_model()
+    if pipe is not None:
+        import gc
+        import torch
+        del pipe
+        pipe = None
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    try_load_local_model(model_pick)
     
     if pipe is not None:
         return {"status": "loaded", "model_type": model_type}
     else:
-        raise HTTPException(status_code=500, detail="Failed to load local model. Check console for details.")
+        raise HTTPException(status_code=500, detail=f"Failed to load {model_pick}. Check console for details.")
 
 @app.get("/api/model-status")
 def model_status_endpoint():
@@ -166,7 +213,7 @@ async def generate_banner(req: GenerateRequest):
         banner_prompt = f"youtube banner background, wide cinematic, {req.prompt}, professional, high quality, 16:9 aspect ratio"
         print(f"Generating image ({model_type}) for: {req.prompt}")
 
-        if model_type == "flux-local" and pipe is not None:
+        if (model_type == "flux" or model_type == "sdxl") and pipe is not None:
             generation_progress = 0
             
             def progress_callback(pipe_ref, step_index, timestep, callback_kwargs):
@@ -180,15 +227,25 @@ async def generate_banner(req: GenerateRequest):
             import asyncio
             
             def do_generate():
-                return pipe(
-                    prompt=banner_prompt,
-                    num_inference_steps=4,
-                    guidance_scale=0.0,
-                    width=1024,
-                    height=576,
-                    max_sequence_length=256,
-                    callback_on_step_end=progress_callback
-                )
+                if model_type == "sdxl":
+                    return pipe(
+                        prompt=banner_prompt,
+                        num_inference_steps=4,
+                        guidance_scale=0.0,
+                        width=1024,
+                        height=576,
+                        callback_on_step_end=progress_callback
+                    )
+                else:    
+                    return pipe(
+                        prompt=banner_prompt,
+                        num_inference_steps=4,
+                        guidance_scale=0.0,
+                        width=1024,
+                        height=576,
+                        max_sequence_length=256,
+                        callback_on_step_end=progress_callback
+                    )
                 
             result = await asyncio.to_thread(do_generate)
             image = result.images[0]

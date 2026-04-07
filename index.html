@@ -27,6 +27,14 @@
                     <i data-lucide="trash-2"></i> Clear Canvas
                 </button>
             </div>
+            <div class="control-group" style="flex-direction: row; gap: 8px;">
+                <button class="btn btn-secondary" id="undoBtn" style="flex: 1; opacity: 0.5; cursor: not-allowed;" title="Undo (Ctrl+Z)" disabled>
+                    <i data-lucide="undo"></i>
+                </button>
+                <button class="btn btn-secondary" id="redoBtn" style="flex: 1; opacity: 0.5; cursor: not-allowed;" title="Redo (Ctrl+Y)" disabled>
+                    <i data-lucide="redo"></i>
+                </button>
+            </div>
 
             <div class="section-title">AI Background</div>
             <div class="control-group">
@@ -35,14 +43,23 @@
                 <div style="margin: 8px 0;">
                     <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">
                         <input type="checkbox" id="useLocalModelToggle" onchange="toggleLocalModel()">
-                        <span>Use Local AI Model (Fast, requires GPU)</span>
+                        <span>Use Local AI Model</span>
                     </label>
+                    <div id="localModelOptions" style="display: none; flex-direction: column; gap: 6px; margin-top: 8px;">
+                        <select id="localModelSelect" class="input-field" style="margin: 0; font-size: 0.8rem;">
+                            <option value="flux">FLUX.1 Schnell (Needs 12GB VRAM)</option>
+                            <option value="sdxl">SDXL Lightning (Needs 8GB VRAM)</option>
+                        </select>
+                        <button class="btn btn-secondary" id="loadBtn" onclick="loadSelectedLocalModel()" style="padding: 4px; font-size: 0.8rem;">
+                            Load Selected Model
+                        </button>
+                    </div>
                     <div id="localModelWarning" style="display: none; font-size: 0.75rem; color: #f59e0b; margin-top: 6px;">
                         Warning: Loading the AI model into memory for the first time will take 10-30 seconds depending on your hardware.
                     </div>
                 </div>
 
-                <button class="btn" id="aiBtn" onclick="generateAIBanner()">
+                <button class="btn" id="aiBtn" onclick="generateAIBanner()" disabled style="opacity: 0.5;">
                     <i data-lucide="sparkles"></i> <span id="aiBtnText">Generate Background</span>
                 </button>
             </div>
@@ -208,8 +225,12 @@
         <span style="font-family: 'Space Grotesk';">preload</span>
     </div>
     
-    <script src="guides.js?v=11"></script>
-    <script src="app.js?v=11"></script>
+    <script src="guides.js?v=12"></script>
+    <script src="js/CanvasManager.js?v=12"></script>
+    <script src="js/HistoryManager.js?v=12"></script>
+    <script src="js/AIManager.js?v=12"></script>
+    <script src="js/UIManager.js?v=12"></script>
+    <script src="app.js?v=12"></script>
     <script>
         lucide.createIcons();
     </script>
