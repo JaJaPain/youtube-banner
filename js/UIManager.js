@@ -80,7 +80,63 @@ class UIManager {
                 iconData = 'image';
             }
 
-            item.innerHTML = `<i data-lucide="${iconData}" style="width: 14px; height: 14px;"></i><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${labelText}</span>`;
+            const label = document.createElement('span');
+            label.style.whiteSpace = 'nowrap';
+            label.style.overflow = 'hidden';
+            label.style.textOverflow = 'ellipsis';
+            label.style.flex = '1';
+            label.innerText = labelText;
+
+            item.innerHTML = `<i data-lucide="${iconData}" style="width: 14px; height: 14px; flex-shrink: 0;"></i>`;
+            item.appendChild(label);
+
+            // Reorder controls
+            const controls = document.createElement('div');
+            controls.style.display = 'flex';
+            controls.style.gap = '2px';
+            controls.style.marginLeft = 'auto';
+
+            const moveUpBtn = document.createElement('button');
+            moveUpBtn.className = 'btn btn-secondary';
+            moveUpBtn.style.padding = '2px 4px';
+            moveUpBtn.style.fontSize = '0.7rem';
+            moveUpBtn.innerHTML = '<i data-lucide="chevron-up" style="width: 12px; height: 12px;"></i>';
+            moveUpBtn.title = "Move Up (Brighter/Frontend)";
+            moveUpBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.canvas.bringForward(obj);
+                if (this.guides) this.guides.bringToFront();
+                this.canvas.renderAll();
+                this.updateLayersList();
+                this.canvas.fire('object:modified', {target: obj});
+            };
+
+            const moveDownBtn = document.createElement('button');
+            moveDownBtn.className = 'btn btn-secondary';
+            moveDownBtn.style.padding = '2px 4px';
+            moveDownBtn.style.fontSize = '0.7rem';
+            moveDownBtn.innerHTML = '<i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>';
+            moveDownBtn.title = "Move Down (Darker/Backend)";
+            moveDownBtn.onclick = (e) => {
+                e.stopPropagation();
+                // We shouldn't send it behind the background (index 0 usually).
+                // Find all non-background/non-guide objects
+                const objects = this.canvas.getObjects();
+                const bgIdx = objects.findIndex(o => o.name === 'background');
+                const currIdx = objects.indexOf(obj);
+                
+                if (currIdx > bgIdx + 1) {
+                    this.canvas.sendBackwards(obj);
+                    if (this.guides) this.guides.bringToFront();
+                    this.canvas.renderAll();
+                    this.updateLayersList();
+                    this.canvas.fire('object:modified', {target: obj});
+                }
+            };
+
+            controls.appendChild(moveUpBtn);
+            controls.appendChild(moveDownBtn);
+            item.appendChild(controls);
             
             item.onclick = () => {
                 this.canvas.setActiveObject(obj);
