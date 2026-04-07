@@ -10,6 +10,195 @@ class UIManager {
         this.setupLayersList();
     }
 
+    async saveProject() {
+        const objects = this.canvas.getObjects();
+        const projectData = {
+            version: '1.0',
+            backgroundColor: this.canvas.backgroundColor,
+            layers: []
+        };
+
+        // Gather all layers while ensuring images are embedded as Base64
+        const layerPromises = objects.map(async (obj) => {
+            // Ignore guides
+            if (obj.name && obj.name.startsWith('guide-')) return null;
+
+            // Use fabric toJSON but ensure we get the custom properties we need
+            // Fabric 5.x toObject includes many properties, but let's be explicit
+            const extraProps = ['name', 'id', 'selectable', 'evented', 'shadow', 'stroke', 'strokeWidth', 'paintFirst'];
+            const data = obj.toObject(extraProps);
+            
+            // Handle cross-origin images or local files to ensure Base64 in JSON
+            if (obj.type === 'image') {
+                const element = obj.getElement();
+                if (element && element.src) {
+                    if (!element.src.startsWith('data:')) {
+                        try {
+                            const tempCanvas = document.createElement('canvas');
+                            tempCanvas.width = element.naturalWidth || element.width;
+                            tempCanvas.height = element.naturalHeight || element.height;
+                            const ctx = tempCanvas.getContext('2d');
+                            ctx.drawImage(element, 0, 0);
+                            data.src = tempCanvas.toDataURL('image/png');
+                        } catch (e) {
+                            console.warn('Could not convert image to Base64 (tainted canvas?), using original src:', e);
+                        }
+                    }
+                }
+            }
+            
+            // Special handling for text with pattern fills
+            if (obj.fill instanceof fabric.Pattern && obj.fill.source) {
+                const source = obj.fill.source;
+                if (source instanceof HTMLImageElement && !source.src.startsWith('data:')) {
+                    try {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = source.naturalWidth || source.width;
+                        tempCanvas.height = source.naturalHeight || source.height;
+                        const ctx = tempCanvas.getContext('2d');
+                        ctx.drawImage(source, 0, 0);
+                        data.fillPatternSrc = tempCanvas.toDataURL('image/png');
+                    } catch (e) {
+                        console.warn('Could not convert pattern source to Base64:', e);
+                    }
+                } else if (source instanceof HTMLImageElement) {
+                    data.fillPatternSrc = source.src;
+                }
+            }
+
+            return data;
+        });
+
+        const resolvedLayers = await Promise.all(layerPromises);
+        projectData.layers = resolvedLayers.filter(l => l !== null);
+
+        const jsonString = JSON.stringify(projectData);
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10) + '_' + now.getHours() + '-' + now.getMinutes();
+        const fileName = `banner-project-${dateStr}.jjp`;
+        
+        // Use the Modern File System Access API if available
+        if (window.showSaveFilePicker) {
+            try {
+                const fileHandle = await window.showSaveFilePicker({
+                    suggestedName: fileName,
+                    types: [{
+                        description: 'BannerCraft Project File',
+                        accept: { 'application/json': ['.jjp'] }
+                    }]
+                });
+                const writable = await fileHandle.createWritable();
+                await writable.write(jsonString);
+                await writable.close();
+            } catch (err) {
+                // Ignore AbortError (user cancelled)
+                if (err.name !== 'AbortError') {
+                    console.error('File saving failed:', err);
+                    alert('Failed to save file: ' + err.message);
+                }
+            }
+        } else {
+            // Fallback for older browsers
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            if (window.saveAs) {
+                saveAs(blob, fileName);
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+    }
+
+    async loadProject(file) {
+        if (!file) return;
+        
+        // Show loading state if needed
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                
+                // Clear existing non-guide layers
+                const currentObjects = this.canvas.getObjects();
+                for (let i = currentObjects.length - 1; i >= 0; i--) {
+                    const obj = currentObjects[i];
+                    if (!obj.name || !obj.name.startsWith('guide-')) {
+                        this.canvas.remove(obj);
+                    }
+                }
+
+                // Restore background
+                if (data.backgroundColor) {
+                    this.canvas.setBackgroundColor(data.backgroundColor, this.canvas.renderAll.bind(this.canvas));
+                    const bgColorInput = document.getElementById('bgColor');
+                    if (bgColorInput) bgColorInput.value = data.backgroundColor;
+                }
+
+                // Fabric enlivenObjects is good for reconstructing from JSON objects
+                // However, we want to maintain the layer order exactly as saved.
+                // We'll process them one by one to ensure proper sequence if there are async image loads.
+                for (const layerData of data.layers) {
+                    await new Promise((resolve) => {
+                        if (layerData.type === 'image') {
+                            fabric.Image.fromURL(layerData.src, (img) => {
+                                img.set(layerData);
+                                // Ensure background images are handled correctly
+                                if (layerData.name === 'background') {
+                                    this.canvas.insertAt(img, 0);
+                                } else {
+                                    this.canvas.add(img);
+                                }
+                                resolve();
+                            }, { crossOrigin: 'anonymous' });
+                        } else if (layerData.type === 'i-text' || layerData.type === 'text') {
+                            const text = new fabric.IText(layerData.text || '', layerData);
+                            
+                            // Restore pattern if it was present
+                            if (layerData.fillPatternSrc) {
+                                fabric.Image.fromURL(layerData.fillPatternSrc, (img) => {
+                                    const pattern = new fabric.Pattern({
+                                        source: img.getElement(),
+                                        repeat: 'repeat'
+                                    });
+                                    text.set('fill', pattern);
+                                    this.canvas.add(text);
+                                    resolve();
+                                });
+                            } else {
+                                this.canvas.add(text);
+                                resolve();
+                            }
+                        } else {
+                            // Fallback for other standard Fabric types
+                            fabric.util.enlivenObjects([layerData], (enlivened) => {
+                                enlivened.forEach(obj => this.canvas.add(obj));
+                                resolve();
+                            });
+                        }
+                    });
+                }
+
+                // Finalize restoration
+                if (this.guides) this.guides.bringToFront();
+                this.canvas.renderAll();
+                this.updateLayersList();
+                
+                // Fire object:modified so HistoryManager records this state
+                this.canvas.fire('object:modified');
+                
+                alert('Project loaded successfully!');
+            } catch (err) {
+                console.error('Error parsing project file:', err);
+                alert('Oops! That .jjp file seems corrupted or invalid.');
+            }
+        };
+        reader.readAsText(file);
+    }
+
     setupLayersList() {
         this.updateLayersList();
         
@@ -461,6 +650,15 @@ class UIManager {
                     if (document.getElementById('exportHint')) document.getElementById('exportHint').innerText = 'Target: 2560 x 1440px | < 6MB';
                     if (document.getElementById('exportBtnText')) document.getElementById('exportBtnText').innerText = 'Download PNG';
                 }
+            });
+        }
+
+        const projectLoad = document.getElementById('projectLoad');
+        if (projectLoad) {
+            projectLoad.addEventListener('change', (e) => {
+                this.loadProject(e.target.files[0]);
+                // Clear value so user can load same file again if they want
+                e.target.value = '';
             });
         }
 

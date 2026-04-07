@@ -26,6 +26,15 @@
                 <button class="btn btn-secondary" onclick="clearCanvas()" style="width: 100%; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);" title="Clear Canvas">
                     <i data-lucide="trash-2"></i> Clear Canvas
                 </button>
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                    <button class="btn btn-secondary" onclick="uiManager.saveProject()" style="flex: 1;" title="Save Project (.jjp)">
+                        <i data-lucide="save"></i> Save Project
+                    </button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('projectLoad').click()" style="flex: 1;" title="Load Project (.jjp)">
+                        <i data-lucide="folder-open"></i> Load Project
+                    </button>
+                    <input type="file" id="projectLoad" hidden accept=".jjp">
+                </div>
             </div>
         </div>
         <div class="sidebar-content">

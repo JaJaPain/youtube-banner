@@ -23,6 +23,11 @@ A professional, high-performance web application designed for creating stunned Y
     - **Panning**: Middle-mouse button drag, Arrow Keys, or Alt/Shift+Drag.
     - **Reset View**: Instant centering and scaling of the banner viewport.
 - **Safe Zone Guides**: Precise overlays for Mobile, Tablet, and Desktop "Safe Areas" to ensure your design looks perfect on every device.
+- **Project Management (.jjp Save/Load)**: 
+    - **Full Serialization**: Save your entire workspace to a single `.jjp` file. 
+    - **Self-Contained Projects**: All images (including AI-generated backgrounds) are converted to Base64 strings and embedded directly in the JSON, so your project never breaks.
+    - **Native File System Access**: Modern "Save As" experience allows you to choose your desired folder and filename.
+    - **Reconstruction Engine**: Instant redraw of the canvas and re-population of your UI Layers List upon loading.
 
 ### 🤖 Local & Cloud AI Generation
 - **Dual Local GPU Models**: Choose your power level based on your hardware:
@@ -61,7 +66,9 @@ A professional, high-performance web application designed for creating stunned Y
 4. **Interactive Layer Control**: Use the scrollable **Layers List** to select and switch between elements directly from the sidebar.
 5. **Style**: Select any element (via canvas or layer list) to reveal its context-sensitive styling menu. Adjust fonts, patterns, and shadows in real-time.
 6. **Preview**: Toggle the **Overlays** at the bottom to ensure your text stays within the "Safe Area" for mobile viewers.
-7. **Download**: Click **Download PNG** to save your high-resolution masterpiece.
+7. **Save Project**: Use the **Save Project** button to export your design as a `.jjp` file for later editing. This captures all layers and assets.
+8. **Load Project**: Drag-and-drop or select a `.jjp` file via the **Load Project** button to pick up exactly where you left off.
+9. **Download**: Click **Download PNG** to save your high-resolution masterpiece.
 
 ## 🧪 Requirements
 - **OS**: Windows (tested)
