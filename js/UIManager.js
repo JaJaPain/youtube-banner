@@ -498,62 +498,83 @@ class UIManager {
 
     onObjectSelected(e) {
         const obj = e.selected[0];
-        const controls = document.getElementById('textControls');
-        if (obj && obj.type === 'i-text') {
-            if (controls) controls.style.display = 'block';
+        const selectionControls = document.getElementById('selectionControls');
+        const textControls = document.getElementById('textControls');
+        
+        if (obj) {
+            if (selectionControls) selectionControls.style.display = 'block';
             
-            const textInput = document.getElementById('textInput');
-            if (textInput) textInput.value = obj.text;
-            
-            const fontSize = document.getElementById('fontSize');
-            if (fontSize) fontSize.value = obj.fontSize;
-            
-            const fontFamily = document.getElementById('fontFamily');
-            if (fontFamily) fontFamily.value = obj.fontFamily;
-            
-            const hasShadow = !!obj.shadow;
-            const textShadow = document.getElementById('textShadow');
-            if (textShadow) textShadow.checked = hasShadow;
-            
-            const shadowConfig = document.getElementById('shadowConfig');
-            if (hasShadow) {
-                if (shadowConfig) shadowConfig.style.display = 'flex';
-                if (document.getElementById('shadowColor')) document.getElementById('shadowColor').value = obj.shadow.color || '#000000';
-                if (document.getElementById('shadowBlur')) document.getElementById('shadowBlur').value = obj.shadow.blur || 0;
-                if (document.getElementById('shadowOffsetX')) document.getElementById('shadowOffsetX').value = obj.shadow.offsetX || 0;
-                if (document.getElementById('shadowOffsetY')) document.getElementById('shadowOffsetY').value = obj.shadow.offsetY || 0;
-            } else {
-                if (shadowConfig) shadowConfig.style.display = 'none';
-            }
-            
-            const removeTextFillBtn = document.getElementById('removeTextFillBtn');
-            const textColor = document.getElementById('textColor');
-            if (obj.fill instanceof fabric.Pattern) {
-                if (removeTextFillBtn) removeTextFillBtn.style.display = 'block';
-            } else {
-                if (textColor) textColor.value = obj.fill;
-                if (removeTextFillBtn) removeTextFillBtn.style.display = 'none';
-            }
+            if (obj.type === 'i-text') {
+                if (textControls) textControls.style.display = 'block';
+                
+                const textInput = document.getElementById('textInput');
+                if (textInput) textInput.value = obj.text;
+                
+                const fontSize = document.getElementById('fontSize');
+                if (fontSize) fontSize.value = obj.fontSize;
+                
+                const fontFamily = document.getElementById('fontFamily');
+                if (fontFamily) fontFamily.value = obj.fontFamily;
+                
+                const hasShadow = !!obj.shadow;
+                const textShadow = document.getElementById('textShadow');
+                if (textShadow) textShadow.checked = hasShadow;
+                
+                const shadowConfig = document.getElementById('shadowConfig');
+                if (hasShadow) {
+                    if (shadowConfig) shadowConfig.style.display = 'flex';
+                    if (document.getElementById('shadowColor')) document.getElementById('shadowColor').value = obj.shadow.color || '#000000';
+                    if (document.getElementById('shadowBlur')) document.getElementById('shadowBlur').value = obj.shadow.blur || 0;
+                    if (document.getElementById('shadowOffsetX')) document.getElementById('shadowOffsetX').value = obj.shadow.offsetX || 0;
+                    if (document.getElementById('shadowOffsetY')) document.getElementById('shadowOffsetY').value = obj.shadow.offsetY || 0;
+                } else {
+                    if (shadowConfig) shadowConfig.style.display = 'none';
+                }
+                
+                const removeTextFillBtn = document.getElementById('removeTextFillBtn');
+                const textColor = document.getElementById('textColor');
+                if (obj.fill instanceof fabric.Pattern) {
+                    if (removeTextFillBtn) removeTextFillBtn.style.display = 'block';
+                } else {
+                    if (textColor) textColor.value = obj.fill;
+                    if (removeTextFillBtn) removeTextFillBtn.style.display = 'none';
+                }
 
-            const hasBorder = !!obj.strokeWidth && obj.strokeWidth > 0;
-            const textBorder = document.getElementById('textBorder');
-            if (textBorder) textBorder.checked = hasBorder;
-            
-            const borderConfig = document.getElementById('borderConfig');
-            if (hasBorder) {
-                if (borderConfig) borderConfig.style.display = 'flex';
-                if (document.getElementById('textBorderColor')) document.getElementById('textBorderColor').value = obj.stroke;
-                if (document.getElementById('textBorderWidth')) document.getElementById('textBorderWidth').value = obj.strokeWidth;
+                const hasBorder = !!obj.strokeWidth && obj.strokeWidth > 0;
+                const textBorder = document.getElementById('textBorder');
+                if (textBorder) textBorder.checked = hasBorder;
+                
+                const borderConfig = document.getElementById('borderConfig');
+                if (hasBorder) {
+                    if (borderConfig) borderConfig.style.display = 'flex';
+                    if (document.getElementById('textBorderColor')) document.getElementById('textBorderColor').value = obj.stroke;
+                    if (document.getElementById('textBorderWidth')) document.getElementById('textBorderWidth').value = obj.strokeWidth;
+                } else {
+                    if (borderConfig) borderConfig.style.display = 'none';
+                }
             } else {
-                if (borderConfig) borderConfig.style.display = 'none';
+                if (textControls) textControls.style.display = 'none';
             }
-        } else {
-            if (controls) controls.style.display = 'none';
         }
     }
 
     onObjectCleared() {
-        const controls = document.getElementById('textControls');
-        if (controls) controls.style.display = 'none';
+        const selectionControls = document.getElementById('selectionControls');
+        const textControls = document.getElementById('textControls');
+        if (selectionControls) selectionControls.style.display = 'none';
+        if (textControls) textControls.style.display = 'none';
+    }
+
+    deleteSelected() {
+        const activeObject = this.canvas.getActiveObject();
+        if (!activeObject) return;
+
+        if (confirm("Are you sure you want to delete this element?")) {
+            this.canvas.remove(activeObject);
+            this.canvas.discardActiveObject();
+            this.canvas.renderAll();
+            this.updateLayersList();
+            this.canvas.fire('object:modified'); // Trigger history save
+        }
     }
 }

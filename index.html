@@ -93,6 +93,12 @@
                         <!-- Populated by JS -->
                     </div>
 
+                    <div id="selectionControls" class="control-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                        <button class="btn" onclick="uiManager.deleteSelected()" style="width: 100%; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+                            <i data-lucide="trash-2"></i> Delete Element
+                        </button>
+                    </div>
+
                     <div id="textControls" class="control-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
                         <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">Text Options</div>
                         <input type="text" id="textInput" class="input-field" placeholder="Edit text...">
@@ -247,12 +253,12 @@
         <span style="font-family: 'Space Grotesk';">preload</span>
     </div>
     
-    <script src="guides.js?v=16"></script>
-    <script src="js/CanvasManager.js?v=16"></script>
-    <script src="js/HistoryManager.js?v=16"></script>
-    <script src="js/AIManager.js?v=16"></script>
-    <script src="js/UIManager.js?v=16"></script>
-    <script src="app.js?v=16"></script>
+    <script src="guides.js?v=17"></script>
+    <script src="js/CanvasManager.js?v=17"></script>
+    <script src="js/HistoryManager.js?v=17"></script>
+    <script src="js/AIManager.js?v=17"></script>
+    <script src="js/UIManager.js?v=17"></script>
+    <script src="app.js?v=17"></script>
     <script>
         lucide.createIcons();
     </script>

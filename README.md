@@ -16,6 +16,7 @@ A professional, high-performance web application designed for creating stunned Y
     - **Visual Dividers**: Clear horizontal separators for distinct functional grouping.
 - **Interactive Layers List**:
     - Real-time scrollable list of all text and image elements on the canvas. 
+    - **Stacking Controls**: Move Up/Down buttons on every layer to precisely control the Z-index (front-to-back ordering).
     - Click-to-select functionality for rapid targeting of design assets.
 - **Canvas Navigation**: 
     - **Zooming**: Smooth mouse wheel zoom or keyboard `+`/`-` keys.
