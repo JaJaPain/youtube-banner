@@ -102,6 +102,40 @@
                         <!-- Populated by JS -->
                     </div>
 
+                    <div id="layerEffectsPanel" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">Layer Effects</div>
+                        
+                        <div class="control-group" style="gap: 12px;">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary);">
+                                    <span>Brightness</span>
+                                    <span id="brightnessVal">100%</span>
+                                </div>
+                                <input type="range" id="brightnessSlider" min="0" max="200" value="100" class="input-field" style="padding: 0; outline: none;">
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary);">
+                                    <span>Contrast</span>
+                                    <span id="contrastVal">100%</span>
+                                </div>
+                                <input type="range" id="contrastSlider" min="0" max="200" value="100" class="input-field" style="padding: 0; outline: none;">
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary);">
+                                    <span>Blur</span>
+                                    <span id="blurVal">0px</span>
+                                </div>
+                                <input type="range" id="blurSlider" min="0" max="50" value="0" class="input-field" style="padding: 0; outline: none;">
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-secondary" onclick="uiManager.resetEffects()" style="width: 100%; margin-top: 8px; font-size: 0.7rem; padding: 4px; opacity: 0.8;">
+                            Reset Effects
+                        </button>
+                    </div>
+
                     <div id="selectionControls" class="control-group" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
                         <button class="btn" onclick="uiManager.deleteSelected()" style="width: 100%; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
                             <i data-lucide="trash-2"></i> Delete Element

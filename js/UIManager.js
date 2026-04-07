@@ -25,7 +25,7 @@ class UIManager {
 
             // Use fabric toJSON but ensure we get the custom properties we need
             // Fabric 5.x toObject includes many properties, but let's be explicit
-            const extraProps = ['name', 'id', 'selectable', 'evented', 'shadow', 'stroke', 'strokeWidth', 'paintFirst'];
+            const extraProps = ['name', 'id', 'selectable', 'evented', 'shadow', 'stroke', 'strokeWidth', 'paintFirst', 'effects'];
             const data = obj.toObject(extraProps);
             
             // Handle cross-origin images or local files to ensure Base64 in JSON
@@ -653,6 +653,39 @@ class UIManager {
             });
         }
 
+        const updateEffects = () => {
+            const active = this.canvas.getActiveObject();
+            if (active) {
+                if (!active.effects) active.effects = { brightness: 100, contrast: 100, blur: 0 };
+                
+                const b = document.getElementById('brightnessSlider').value;
+                const c = document.getElementById('contrastSlider').value;
+                const bl = document.getElementById('blurSlider').value;
+                
+                active.effects.brightness = parseInt(b);
+                active.effects.contrast = parseInt(c);
+                active.effects.blur = parseInt(bl);
+                
+                document.getElementById('brightnessVal').innerText = b + '%';
+                document.getElementById('contrastVal').innerText = c + '%';
+                document.getElementById('blurVal').innerText = bl + 'px';
+                
+                active.set('dirty', true);
+                this.canvas.renderAll();
+            }
+        };
+
+        ['brightnessSlider', 'contrastSlider', 'blurSlider'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', updateEffects);
+                el.addEventListener('change', () => {
+                    const active = this.canvas.getActiveObject();
+                    if (active) this.canvas.fire('object:modified', {target: active});
+                });
+            }
+        });
+
         const projectLoad = document.getElementById('projectLoad');
         if (projectLoad) {
             projectLoad.addEventListener('change', (e) => {
@@ -698,9 +731,20 @@ class UIManager {
         const obj = e.selected[0];
         const selectionControls = document.getElementById('selectionControls');
         const textControls = document.getElementById('textControls');
+        const layerEffectsPanel = document.getElementById('layerEffectsPanel');
         
         if (obj) {
             if (selectionControls) selectionControls.style.display = 'block';
+            if (layerEffectsPanel) layerEffectsPanel.style.display = 'block';
+
+            // Sync Effects Sliders
+            const effects = obj.effects || { brightness: 100, contrast: 100, blur: 0 };
+            document.getElementById('brightnessSlider').value = effects.brightness;
+            document.getElementById('brightnessVal').innerText = effects.brightness + '%';
+            document.getElementById('contrastSlider').value = effects.contrast;
+            document.getElementById('contrastVal').innerText = effects.contrast + '%';
+            document.getElementById('blurSlider').value = effects.blur;
+            document.getElementById('blurVal').innerText = effects.blur + 'px';
             
             if (obj.type === 'i-text') {
                 if (textControls) textControls.style.display = 'block';
@@ -759,8 +803,28 @@ class UIManager {
     onObjectCleared() {
         const selectionControls = document.getElementById('selectionControls');
         const textControls = document.getElementById('textControls');
+        const layerEffectsPanel = document.getElementById('layerEffectsPanel');
         if (selectionControls) selectionControls.style.display = 'none';
         if (textControls) textControls.style.display = 'none';
+        if (layerEffectsPanel) layerEffectsPanel.style.display = 'none';
+    }
+
+    resetEffects() {
+        const active = this.canvas.getActiveObject();
+        if (active) {
+            active.effects = { brightness: 100, contrast: 100, blur: 0 };
+            
+            document.getElementById('brightnessSlider').value = 100;
+            document.getElementById('brightnessVal').innerText = '100%';
+            document.getElementById('contrastSlider').value = 100;
+            document.getElementById('contrastVal').innerText = '100%';
+            document.getElementById('blurSlider').value = 0;
+            document.getElementById('blurVal').innerText = '0px';
+            
+            active.set('dirty', true);
+            this.canvas.renderAll();
+            this.canvas.fire('object:modified', {target: active});
+        }
     }
 
     deleteSelected() {
