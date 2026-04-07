@@ -10,6 +10,13 @@ A professional, high-performance web application designed for creating stunned Y
     - Advanced **Drop Shadows** (Blur, X/Y Offset).
     - Dynamic **Border Outlines** (Thickness & Color).
     - **Image Pattern Fills**: Map any uploaded image directly onto your text characters.
+- **Modular Sidebar UI**: 
+    - **Collapsible Sections**: Dedicated Background and Elements dropdowns for a clean, organized workflow.
+    - **Optimized Layout**: Reordered action buttons and AI controls for maximum design efficiency.
+    - **Visual Dividers**: Clear horizontal separators for distinct functional grouping.
+- **Interactive Layers List**:
+    - Real-time scrollable list of all text and image elements on the canvas. 
+    - Click-to-select functionality for rapid targeting of design assets.
 - **Canvas Navigation**: 
     - **Zooming**: Smooth mouse wheel zoom or keyboard `+`/`-` keys.
     - **Panning**: Middle-mouse button drag, Arrow Keys, or Alt/Shift+Drag.
@@ -47,12 +54,13 @@ A professional, high-performance web application designed for creating stunned Y
 
 ## 📖 How to Use
 
-1. **Set your Background**: Use a solid color, upload an image, or describe your vision in the **AI Background** box.
-2. **Pick your AI Model**: If using a local GPU, select your model from the dropdown and hit **Load Selected Model**.
-3. **Add Elements**: Create text blocks or upload foreground images/logos.
-4. **Style**: Click any element to reveal the dynamic styling sidebar. Adjust fonts, patterns, and shadows in real-time.
-5. **Preview**: Toggle the **Overlays** at the bottom to ensure your text stays within the "Safe Area" for mobile viewers.
-6. **Download**: Click **Download PNG** to save your high-resolution masterpiece.
+1. **Manage your Background**: Expand the **Background** section and set your solid color, upload an image, or describe your vision in the **AI Generator** box.
+2. **Pick your AI Model**: If using a local GPU, toggle the **Use Local AI Model** checkbox, select your model, and hit **Load Selected Model**.
+3. **Add & Manage Elements**: Expand the **Elements** section to add text blocks or upload images/logos.
+4. **Interactive Layer Control**: Use the scrollable **Layers List** to select and switch between elements directly from the sidebar.
+5. **Style**: Select any element (via canvas or layer list) to reveal its context-sensitive styling menu. Adjust fonts, patterns, and shadows in real-time.
+6. **Preview**: Toggle the **Overlays** at the bottom to ensure your text stays within the "Safe Area" for mobile viewers.
+7. **Download**: Click **Download PNG** to save your high-resolution masterpiece.
 
 ## 🧪 Requirements
 - **OS**: Windows (tested)

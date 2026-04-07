@@ -7,6 +7,94 @@ class UIManager {
         this.guides = guides;
         
         this.setupEventListeners();
+        this.setupLayersList();
+    }
+
+    setupLayersList() {
+        this.updateLayersList();
+        
+        // Listen to canvas events to update the list
+        this.canvas.on('object:added', () => this.updateLayersList());
+        this.canvas.on('object:removed', () => this.updateLayersList());
+        this.canvas.on('object:modified', () => this.updateLayersList());
+        
+        // Update selection states in real-time
+        this.canvas.on('selection:created', () => this.updateLayersList());
+        this.canvas.on('selection:updated', () => this.updateLayersList());
+        this.canvas.on('selection:cleared', () => this.updateLayersList());
+    }
+
+    updateLayersList() {
+        const container = document.getElementById('layersListContainer');
+        if (!container) return;
+
+        // Clear existing items
+        container.innerHTML = '';
+
+        // Get objects. Filter out background and guides if necessary, but keep images and text.
+        // Fabric js has objects in back-to-front order. Reverse to show top layer first.
+        const objects = [...this.canvas.getObjects()].reverse();
+        
+        const validObjects = objects.filter(obj => {
+            return obj.name !== 'background' && !(obj.name && obj.name.startsWith('guide-'));
+        });
+
+        if (validObjects.length === 0) {
+            container.innerHTML = '<div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; padding: 8px;">No elements added yet</div>';
+            return;
+        }
+
+        const activeObject = this.canvas.getActiveObject();
+        const activeObjects = this.canvas.getActiveObjects ? this.canvas.getActiveObjects() : (activeObject ? [activeObject] : []);
+
+        validObjects.forEach(obj => {
+            const item = document.createElement('div');
+            item.style.padding = '6px 8px';
+            item.style.fontSize = '0.8rem';
+            item.style.cursor = 'pointer';
+            item.style.borderRadius = '4px';
+            item.style.display = 'flex';
+            item.style.alignItems = 'center';
+            item.style.gap = '8px';
+            item.style.transition = 'all 0.1s ease';
+
+            const isActive = activeObjects.includes(obj);
+            if (isActive) {
+                item.style.backgroundColor = 'var(--primary-color)';
+                item.style.color = '#fff';
+            } else {
+                item.style.backgroundColor = 'transparent';
+                item.style.color = 'var(--text-secondary)';
+                item.onmouseenter = () => item.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                item.onmouseleave = () => item.style.backgroundColor = 'transparent';
+            }
+
+            // Determine label and icon
+            let labelText = 'Object';
+            let iconData = 'square';
+            if (obj.type === 'i-text' || obj.type === 'text') {
+                labelText = obj.text && obj.text.length > 20 ? obj.text.substring(0, 20) + '...' : (obj.text || 'Text');
+                iconData = 'type';
+            } else if (obj.type === 'image') {
+                labelText = 'Image Element';
+                iconData = 'image';
+            }
+
+            item.innerHTML = `<i data-lucide="${iconData}" style="width: 14px; height: 14px;"></i><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${labelText}</span>`;
+            
+            item.onclick = () => {
+                this.canvas.setActiveObject(obj);
+                this.canvas.renderAll();
+                this.canvas.fire('selection:created', { selected: [obj] });
+            };
+
+            container.appendChild(item);
+        });
+
+        // Re-inject icons
+        if (window.lucide) {
+            lucide.createIcons({root: container});
+        }
     }
 
     setupEventListeners() {

@@ -39,6 +39,9 @@ body {
 .sidebar-header {
     padding: 24px;
     border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .sidebar-header h1 {
@@ -50,10 +53,72 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
+.header-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 4px;
+}
+
+.header-actions .btn-secondary {
+    flex: 1;
+    padding: 8px;
+    font-size: 0.8rem;
+}
+
 .sidebar-content {
     flex: 1;
     padding: 24px;
     overflow-y: auto;
+}
+
+/* Collapsible Section */
+details.collapsible-section {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--glass-bg);
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+details.collapsible-section[open] {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+details.collapsible-section summary {
+    list-style: none;
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    user-select: none;
+}
+
+details.collapsible-section summary::-webkit-details-marker {
+    display: none;
+}
+
+details.collapsible-section summary::after {
+    content: '→';
+    font-size: 0.8rem;
+    transition: transform 0.2s;
+    color: var(--primary-color);
+}
+
+details.collapsible-section[open] summary::after {
+    transform: rotate(90deg);
+}
+
+details.collapsible-section .section-content {
+    padding: 0 16px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .section-title {
