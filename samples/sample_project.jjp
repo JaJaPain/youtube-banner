@@ -1,0 +1,52 @@
+{
+  "version": "1.0",
+  "backgroundColor": "#1a1a1a",
+  "layers": [
+    {
+      "type": "i-text",
+      "version": "5.3.1",
+      "originX": "center",
+      "originY": "center",
+      "left": 1280,
+      "top": 720,
+      "width": 1200,
+      "height": 140,
+      "fill": "#ffffff",
+      "stroke": "#3b82f6",
+      "strokeWidth": 8,
+      "paintFirst": "stroke",
+      "shadow": {
+        "color": "rgba(0,0,0,0.8)",
+        "blur": 20,
+        "offsetX": 10,
+        "offsetY": 10
+      },
+      "text": "YOUR CHANNEL",
+      "fontSize": 150,
+      "fontWeight": "bold",
+      "fontFamily": "Bebas Neue",
+      "textAlign": "center",
+      "selectable": true,
+      "evented": true,
+      "id": "sample-text-1"
+    },
+    {
+      "type": "i-text",
+      "version": "5.3.1",
+      "originX": "center",
+      "originY": "center",
+      "left": 1280,
+      "top": 850,
+      "width": 800,
+      "height": 60,
+      "fill": "#94a3b8",
+      "text": "SUBSCRIBE FOR MORE CONTENT",
+      "fontSize": 45,
+      "fontFamily": "Inter",
+      "textAlign": "center",
+      "selectable": true,
+      "evented": true,
+      "id": "sample-text-2"
+    }
+  ]
+}

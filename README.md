@@ -1,6 +1,10 @@
 # YouTube Banner Creator - Premium Suite
 
+![BannerCraft Pro Showcase](assets/Screenshot.png)
+
 A professional, high-performance web application designed for creating stunned YouTube banners (2560x1440) and thumbnails. This suite features a modularized architecture, offline-first AI generation capabilities, and a robust undo/redo history system.
+
+**Tags**: `python`, `fastapi`, `stable-diffusion`, `youtube-tools`, `javascript`
 
 ## 🚀 Key Features
 
@@ -45,6 +49,11 @@ A professional, high-performance web application designed for creating stunned Y
 
 ## 📦 Installation & Setup
 
+### ⚙️ Requirements
+- **GPU (for Local AI)**: **NVIDIA RTX series** (8GB+ VRAM recommended for SDXL, 12GB+ for FLUX). Local model execution (FLUX/SDXL) requires an NVIDIA GPU with CUDA support.
+- **Python**: 3.10+
+- **OS**: Windows (tested)
+
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/JaJaPain/youtube-banner.git
@@ -70,10 +79,8 @@ A professional, high-performance web application designed for creating stunned Y
 8. **Load Project**: Drag-and-drop or select a `.jjp` file via the **Load Project** button to pick up exactly where you left off.
 9. **Download**: Click **Download PNG** to save your high-resolution masterpiece.
 
-## 🧪 Requirements
-- **OS**: Windows (tested)
-- **GPU (for Local AI)**: NVIDIA RTX series (8GB+ VRAM recommended for SDXL, 12GB+ for FLUX).
-- **Backend Dependencies**: `fastapi`, `diffusers`, `torch`, `peft`, `transformers`, `accelerate`.
+## 📄 License
+This project is licensed under the MIT License.
 
 ---
 *Built with ❤️ for Creators.*
