@@ -143,7 +143,8 @@ class AIManager {
             const data = await response.json();
             
             fabric.Image.fromURL(data.image, (img) => {
-                const scale = Math.max(2560 / img.width, 1440 / img.height);
+                const preset = canvasManager ? canvasManager.getPreset() : { width: 2560, height: 1440 };
+                const scale = Math.max(preset.width / img.width, preset.height / img.height);
                 img.set({
                     scaleX: scale,
                     scaleY: scale,

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Banner Creator</title>
+    <title>BannerCraft Pro — Multi-Platform Creator</title>
     <link rel="stylesheet" href="style.css?v=6">
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Bangers&family=Bebas+Neue&family=Cormorant+Garamond:wght@400;700&family=Inter:wght@400;700&family=Knewave&family=Luckiest+Guy&family=Montserrat:wght@400;700;800&family=Outfit:wght@400;700&family=Oswald:wght@400;700&family=Permanent+Marker&family=Playfair+Display:wght@400;700&family=Poppins:wght@400;700&family=Raleway:wght@400;700&family=Roboto:wght@400;700&family=Space+Grotesk:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
@@ -38,6 +38,31 @@
             </div>
         </div>
         <div class="sidebar-content">
+            <details class="collapsible-section" open>
+                <summary>Canvas Preset</summary>
+                <div class="section-content">
+                    <div class="control-group">
+                        <select id="canvasPreset" class="input-field" onchange="applyPreset(this)">
+                            <optgroup label="YouTube">
+                                <option value="yt-banner" selected>YouTube Banner (2560×1440)</option>
+                                <option value="yt-thumbnail">YouTube Thumbnail (1280×720)</option>
+                            </optgroup>
+                            <optgroup label="X (Twitter)">
+                                <option value="x-header">X Header (1500×500)</option>
+                                <option value="x-post">X Post (1200×675)</option>
+                            </optgroup>
+                            <optgroup label="Instagram">
+                                <option value="ig-square">Instagram Square (1080×1080)</option>
+                                <option value="ig-story">Instagram Story / Reel (1080×1920)</option>
+                            </optgroup>
+                        </select>
+                        <div id="presetDimsHint" style="font-size: 0.7rem; color: var(--text-secondary); text-align: center;">2560 × 1440px</div>
+                    </div>
+                </div>
+            </details>
+
+            <div style="border-top: 1px solid var(--border-color); margin: 8px 0 24px 0;"></div>
+
             <details class="collapsible-section" open>
                 <summary>Background</summary>
                 <div class="section-content">
@@ -239,11 +264,21 @@
 
             <div class="section-title" style="margin-top: 0; padding-top: 0;">Export</div>
             <div class="control-group">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary);">
+                        <span>Quality</span>
+                        <span id="qualityVal">1.0</span>
+                    </div>
+                    <input type="range" id="exportQuality" min="0.1" max="1.0" step="0.1" value="1.0" class="input-field" style="padding: 0; outline: none;">
+                </div>
                 <button class="btn" id="exportBtn" onclick="exportBanner()">
                     <i data-lucide="download"></i> <span id="exportBtnText">Download PNG</span>
                 </button>
                 <div id="exportHint" style="font-size: 0.7rem; color: var(--text-secondary); text-align: center;">
-                    Target: 2560 x 1440px | < 6MB
+                    Target: 2560 × 1440px | < 6MB
+                </div>
+                <div id="sizeWarning" style="display: none; font-size: 0.75rem; color: #ef4444; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 8px 12px; text-align: center;">
+                    ⚠ File exceeds platform size limit.
                 </div>
             </div>
         </div>
@@ -261,19 +296,9 @@
                 <i data-lucide="maximize"></i> Reset View
             </button>
             <div style="width: 1px; height: 16px; background: var(--border-color); margin: 0 8px;"></div>
-            <label class="overlay-control">
-                <input type="checkbox" id="showDesktop" checked> Desktop Area (2560x423)
-            </label>
-            <label class="overlay-control">
-                <input type="checkbox" id="showTablet" checked> Tablet Area (1855x423)
-            </label>
-            <label class="overlay-control">
-                <input type="checkbox" id="showMobile" checked> Safe Area (1546x423)
-            </label>
-            <div style="width: 1px; height: 16px; background: var(--border-color); margin: 0 8px;"></div>
-            <label class="overlay-control" style="color: var(--primary-color);">
-                <input type="checkbox" id="isThumbnail"> Thumbnail Mode
-            </label>
+            <div id="guideTogglesContainer" style="display: contents;">
+                <!-- Populated dynamically by CanvasManager._updateOverlayControls() -->
+            </div>
         </div>
     </main>
 

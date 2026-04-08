@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         originalRender.call(this, ctx);
-        // Reset filter
         if (hasFilter) {
             ctx.filter = 'none';
         }
@@ -30,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     canvasManager = new CanvasManager();
     const canvas = canvasManager.canvas;
     
-    // Initialize guides
+    // Initialize guides (defaults to yt-banner preset)
     guides = new BannerGuides(canvas);
     guides.init();
 
@@ -38,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     aiManager = new AIManager(canvas, guides);
     uiManager = new UIManager(canvasManager, historyManager, aiManager, guides);
 
-    // Global forwards for HTML onclick attributes
+    // Global forwards for HTML onclick/onchange attributes
     window.historyManager = historyManager;
     window.addText = () => uiManager.addText();
     window.clearCanvas = () => canvasManager.clearCanvas();
@@ -47,12 +46,30 @@ document.addEventListener('DOMContentLoaded', () => {
     window.toggleLocalModel = () => aiManager.toggleLocalModel();
     window.loadSelectedLocalModel = () => aiManager.loadSelectedLocalModel();
     window.resetView = () => canvasManager.resetView();
-    // Expose uiManager globally for HTML buttons
     window.uiManager = uiManager;
+
+    /** Called when the Canvas Preset dropdown changes */
+    window.applyPreset = (selectElement) => {
+        const presetId = selectElement.value;
+        canvasManager.applyPreset(presetId, guides);
+        canvasManager.resetView();
+    };
+
+    /** Quality slider display sync */
+    const qSlider = document.getElementById('exportQuality');
+    const qVal = document.getElementById('qualityVal');
+    if (qSlider && qVal) {
+        qSlider.addEventListener('input', () => {
+            qVal.innerText = parseFloat(qSlider.value).toFixed(1);
+        });
+    }
+
+    // Initialize overlay controls for the default preset
+    canvasManager._updateOverlayControls(guides);
+    canvasManager._updateExportHint();
 
     // Global keyboard listeners
     document.addEventListener('keydown', (e) => {
-        // Prevent deletion if the user is typing in an input or textarea
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
         if (e.key === 'Delete' || e.key === 'Backspace') {

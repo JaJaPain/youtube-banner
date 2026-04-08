@@ -1,6 +1,7 @@
 class CanvasManager {
     constructor() {
         this.wrapper = document.querySelector('.canvas-container-wrapper');
+        this.currentPreset = 'yt-banner';
         this.canvas = new fabric.Canvas('canvas', {
             width: this.wrapper.clientWidth - 80,
             height: this.wrapper.clientHeight - 80,
@@ -21,6 +22,75 @@ class CanvasManager {
         });
     }
 
+    /** Get the active preset config from the global PLATFORM_PRESETS */
+    getPreset() {
+        return PLATFORM_PRESETS[this.currentPreset];
+    }
+
+    /**
+     * Switch canvas logical dimensions to match a new preset.
+     * Does NOT delete any layers — only resizes the workspace.
+     */
+    applyPreset(presetId, guidesManager) {
+        if (!PLATFORM_PRESETS[presetId]) return;
+        this.currentPreset = presetId;
+
+        // Update guides
+        guidesManager.setPreset(presetId);
+
+        // Reset the viewport to fit the new dimensions
+        this.resetView();
+
+        // Update overlay controls in the footer bar
+        this._updateOverlayControls(guidesManager);
+
+        // Update the export hint
+        this._updateExportHint();
+
+        // Update the dimension hint under the dropdown
+        const preset = this.getPreset();
+        const dimsHint = document.getElementById('presetDimsHint');
+        if (dimsHint) dimsHint.innerText = `${preset.width} × ${preset.height}px`;
+    }
+
+    /** Rebuild the bottom overlay-controls bar to show this preset's guide toggles */
+    _updateOverlayControls(guidesManager) {
+        const container = document.getElementById('guideTogglesContainer');
+        if (!container) return;
+
+        container.innerHTML = '';
+        const preset = this.getPreset();
+
+        preset.guides.forEach(g => {
+            const label = document.createElement('label');
+            label.className = 'overlay-control';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = guidesManager.visible[g.id] !== false;
+            cb.addEventListener('change', () => {
+                guidesManager.toggle(g.id, cb.checked);
+            });
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(' ' + g.label));
+            container.appendChild(label);
+        });
+    }
+
+    /** Update the export hint text and size-warning state */
+    _updateExportHint() {
+        const preset = this.getPreset();
+        const hint = document.getElementById('exportHint');
+        if (hint) {
+            const sizeStr = preset.maxFileSize
+                ? `< ${Math.round(preset.maxFileSize / (1024 * 1024))}MB`
+                : 'No hard limit';
+            hint.innerText = `Target: ${preset.width} × ${preset.height}px | ${sizeStr}`;
+        }
+        // Hide any previous size warning
+        const warn = document.getElementById('sizeWarning');
+        if (warn) warn.style.display = 'none';
+    }
+
     setupNavigation() {
         this.canvas.on('mouse:wheel', (opt) => {
             let delta = opt.e.deltaY;
@@ -35,7 +105,6 @@ class CanvasManager {
 
         this.canvas.on('mouse:down', (opt) => {
             let evt = opt.e;
-            // Enable dragging if holding Alt, Shift, or pressing middle mouse button (evt.button === 1)
             if (evt.button === 1 || evt.altKey === true || evt.shiftKey === true) {
                 this.canvas.isDragging = true;
                 this.canvas.selection = false;
@@ -63,9 +132,7 @@ class CanvasManager {
             this.canvas.selection = true;
         });
 
-        // Add keyboard shortcuts for panning and zooming
         window.addEventListener('keydown', (e) => {
-            // Ignore if user is typing in an input or textarea
             const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
             if (activeTag === 'input' || activeTag === 'textarea') return;
 
@@ -73,30 +140,16 @@ class CanvasManager {
             let vpt = this.canvas.viewportTransform;
             let needsRender = false;
 
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                vpt[5] += panAmount;
-                needsRender = true;
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                vpt[5] -= panAmount;
-                needsRender = true;
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                vpt[4] += panAmount;
-                needsRender = true;
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                vpt[4] -= panAmount;
-                needsRender = true;
-            }
+            if (e.key === 'ArrowUp')    { e.preventDefault(); vpt[5] += panAmount; needsRender = true; }
+            else if (e.key === 'ArrowDown')  { e.preventDefault(); vpt[5] -= panAmount; needsRender = true; }
+            else if (e.key === 'ArrowLeft')  { e.preventDefault(); vpt[4] += panAmount; needsRender = true; }
+            else if (e.key === 'ArrowRight') { e.preventDefault(); vpt[4] -= panAmount; needsRender = true; }
 
             if (needsRender) {
                 this.canvas.setViewportTransform(vpt);
                 this.canvas.requestRenderAll();
             }
 
-            // Keyboard Zooming
             if (e.key === '+' || e.key === '=') {
                 e.preventDefault();
                 let zoom = this.canvas.getZoom();
@@ -114,15 +167,19 @@ class CanvasManager {
     }
 
     resetView() {
+        const preset = this.getPreset();
+        const pw = preset.width;
+        const ph = preset.height;
+
         const scale = Math.min(
-            (this.wrapper.clientWidth - 80) / 2560,
-            (this.wrapper.clientHeight - 80) / 1440
+            (this.wrapper.clientWidth - 80) / pw,
+            (this.wrapper.clientHeight - 80) / ph
         );
         
         this.canvas.setZoom(scale);
         this.canvas.absolutePan({ 
-            x: -(this.canvas.width - 2560 * scale) / 2, 
-            y: -(this.canvas.height - 1440 * scale) / 2 
+            x: -(this.canvas.width - pw * scale) / 2, 
+            y: -(this.canvas.height - ph * scale) / 2 
         });
     }
 
@@ -137,43 +194,41 @@ class CanvasManager {
             }
             this.canvas.setBackgroundColor('#000000', this.canvas.renderAll.bind(this.canvas));
             document.getElementById('bgColor').value = '#000000';
-            
-            // Allow history to catch this change
             this.canvas.fire('object:modified');
         }
     }
 
     async exportBanner(guidesManager) {
+        const preset = this.getPreset();
+        const exportW = preset.width;
+        const exportH = preset.height;
+
         // Save current view state
         const currentZoom = this.canvas.getZoom();
         const currentVpt = this.canvas.viewportTransform.slice();
         const originalWidth = this.canvas.getWidth();
         const originalHeight = this.canvas.getHeight();
 
-        // Hide guides
-        const desktopVisible = guidesManager.visible.desktop;
-        const tabletVisible = guidesManager.visible.tablet;
-        const mobileVisible = guidesManager.visible.mobile;
-        guidesManager.toggle('desktop', false);
-        guidesManager.toggle('tablet', false);
-        guidesManager.toggle('mobile', false);
+        // Hide all guides
+        const savedVisibility = { ...guidesManager.visible };
+        Object.keys(savedVisibility).forEach(id => guidesManager.toggle(id, false));
 
-        // Check if thumbnail mode is active
-        const isThumb = document.getElementById('isThumbnail').checked;
-        
-        // Reset zoom for full resolution export
-        this.canvas.setWidth(isThumb ? 1280 : 2560);
-        this.canvas.setHeight(isThumb ? 720 : 1440);
-        if (isThumb) {
-            this.canvas.setZoom(0.5);
-        } else {
-            this.canvas.setZoom(1);
-        }
-        
-        this.canvas.setViewportTransform([isThumb ? 0.5 : 1, 0, 0, isThumb ? 0.5 : 1, 0, 0]);
+        // Set canvas to export dimensions at zoom 1
+        this.canvas.setWidth(exportW);
+        this.canvas.setHeight(exportH);
+        this.canvas.setZoom(1);
+        this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
         this.canvas.renderAll();
 
-        // Build a timestamped filename
+        // Read quality slider
+        const qualitySlider = document.getElementById('exportQuality');
+        let quality = qualitySlider ? parseFloat(qualitySlider.value) : 1.0;
+
+        // Determine format
+        const format = preset.defaultFormat || 'image/png';
+        const ext = format === 'image/jpeg' ? '.jpg' : '.png';
+
+        // Build filename
         const now = new Date();
         const dateStr = now.getFullYear() + '-' +
             String(now.getMonth() + 1).padStart(2, '0') + '-' +
@@ -181,42 +236,63 @@ class CanvasManager {
             String(now.getHours()).padStart(2, '0') + '-' +
             String(now.getMinutes()).padStart(2, '0') + '-' +
             String(now.getSeconds()).padStart(2, '0');
-        const ext = '.png';
-        const mime = 'image/png';
-        const quality = 1.0;
-        
-        const prefix = isThumb ? 'youtube-thumbnail_' : 'youtube-banner_';
-        const fileName = prefix + dateStr + ext;
+        const fileName = `${preset.filePrefix}_${dateStr}${ext}`;
 
         const rawCanvas = this.canvas.getElement();
 
         try {
-            const blob = await new Promise((resolve) => {
-                rawCanvas.toBlob((b) => { resolve(b); }, mime, quality);
+            let blob = await new Promise(resolve => {
+                rawCanvas.toBlob(b => resolve(b), format, quality);
             });
 
             if (!blob) {
                 alert('Export failed — the canvas may be tainted by cross-origin images.');
-                restoreView(this.canvas);
+                restoreView(this);
                 return;
             }
 
+            // === Size validation ===
+            const sizeWarning = document.getElementById('sizeWarning');
+            if (preset.maxFileSize && blob.size > preset.maxFileSize) {
+                const limitMB = Math.round(preset.maxFileSize / (1024 * 1024));
+                const currentMB = (blob.size / (1024 * 1024)).toFixed(2);
+
+                // Auto-retry with JPEG at lower quality
+                if (format !== 'image/jpeg' || quality > 0.5) {
+                    const retryQuality = Math.max(0.5, quality - 0.2);
+                    blob = await new Promise(resolve => {
+                        rawCanvas.toBlob(b => resolve(b), 'image/jpeg', retryQuality);
+                    });
+                }
+
+                if (blob.size > preset.maxFileSize) {
+                    if (sizeWarning) {
+                        sizeWarning.style.display = 'flex';
+                        sizeWarning.innerText = `⚠ File size (${currentMB} MB) exceeds ${limitMB} MB limit for ${preset.label}. Lower the Quality slider and try again.`;
+                    }
+                    restoreView(this);
+                    return;
+                } else {
+                    if (sizeWarning) sizeWarning.style.display = 'none';
+                }
+            } else {
+                if (sizeWarning) sizeWarning.style.display = 'none';
+            }
+
+            // Save the file
             if (window.showSaveFilePicker) {
                 try {
                     const fileHandle = await window.showSaveFilePicker({
                         suggestedName: fileName,
-                        types: [{ description: 'PNG Image', accept: { [mime]: [ext] } }]
+                        types: [{ description: `${ext === '.jpg' ? 'JPEG' : 'PNG'} Image`, accept: { [format]: [ext] } }]
                     });
                     const writable = await fileHandle.createWritable();
                     await writable.write(blob);
                     await writable.close();
-                    restoreView(this.canvas);
+                    restoreView(this);
                     return;
                 } catch (err) {
-                    if (err.name === 'AbortError') {
-                        restoreView(this.canvas);
-                        return;
-                    }
+                    if (err.name === 'AbortError') { restoreView(this); return; }
                     console.warn('showSaveFilePicker failed, falling back:', err);
                 }
             }
@@ -224,26 +300,24 @@ class CanvasManager {
             const url = URL.createObjectURL(blob);
             const newTab = window.open(url, '_blank');
             if (newTab) {
-                alert('Your banner has opened in a new tab. Right-click the image and select "Save image as..." to save it to your Downloads folder.');
+                alert(`Your ${preset.label} has opened in a new tab. Right-click the image and select "Save image as..." to download.`);
             } else {
                 window.location.href = url;
             }
-            restoreView(this.canvas);
+            restoreView(this);
 
         } catch (e) {
             console.error('Export error:', e);
             alert('Export error: ' + e.message);
-            restoreView(this.canvas);
+            restoreView(this);
         }
 
-        function restoreView(canvasInstance) {
-            canvasInstance.setWidth(originalWidth);
-            canvasInstance.setHeight(originalHeight);
-            canvasInstance.setZoom(currentZoom);
-            canvasInstance.setViewportTransform(currentVpt);
-            guidesManager.toggle('desktop', desktopVisible);
-            guidesManager.toggle('tablet', tabletVisible);
-            guidesManager.toggle('mobile', mobileVisible);
+        function restoreView(mgr) {
+            mgr.canvas.setWidth(originalWidth);
+            mgr.canvas.setHeight(originalHeight);
+            mgr.canvas.setZoom(currentZoom);
+            mgr.canvas.setViewportTransform(currentVpt);
+            Object.keys(savedVisibility).forEach(id => guidesManager.toggle(id, savedVisibility[id]));
         }
     }
 }

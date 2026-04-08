@@ -1,102 +1,183 @@
+// =============================================================================
+// Platform Presets — Canonical dimensions, guide configs, and export constraints
+// =============================================================================
+const PLATFORM_PRESETS = {
+    'yt-banner': {
+        label: 'YouTube Banner',
+        width: 2560,
+        height: 1440,
+        filePrefix: 'youtube-banner',
+        maxFileSize: 6 * 1024 * 1024,  // 6 MB
+        defaultFormat: 'image/png',
+        guides: [
+            { id: 'desktop', label: 'Desktop Area (2560×423)',   w: 2560, h: 423, color: 'rgba(255,255,255,0.2)',  fill: 'rgba(255,255,255,0.05)', centered: true },
+            { id: 'tablet',  label: 'Tablet Area (1855×423)',    w: 1855, h: 423, color: 'rgba(255,255,255,0.4)',  fill: 'rgba(255,255,255,0.05)', centered: true },
+            { id: 'mobile',  label: 'Safe Area (1546×423)',      w: 1546, h: 423, color: 'rgba(255,255,255,0.8)',  fill: 'rgba(255,255,255,0.10)', centered: true }
+        ]
+    },
+    'yt-thumbnail': {
+        label: 'YouTube Thumbnail',
+        width: 1280,
+        height: 720,
+        filePrefix: 'youtube-thumbnail',
+        maxFileSize: 2 * 1024 * 1024,
+        defaultFormat: 'image/png',
+        guides: [
+            { id: 'safe', label: 'Safe Area (1152×648)', w: 1152, h: 648, color: 'rgba(255,255,255,0.6)', fill: 'rgba(255,255,255,0.05)', centered: true }
+        ]
+    },
+    'x-header': {
+        label: 'X Header',
+        width: 1500,
+        height: 500,
+        filePrefix: 'x-header',
+        maxFileSize: 2 * 1024 * 1024,  // X enforces 2 MB
+        defaultFormat: 'image/jpeg',
+        guides: [
+            { id: 'avatar', label: 'Profile Avatar Zone', type: 'circle', cx: 210, cy: 425, radius: 75, color: 'rgba(29,155,240,0.7)', fill: 'rgba(29,155,240,0.08)' },
+            { id: 'safe',   label: 'Content Safe Area',  w: 1380, h: 420, color: 'rgba(255,255,255,0.4)', fill: 'rgba(255,255,255,0.05)', centered: true }
+        ]
+    },
+    'x-post': {
+        label: 'X Post',
+        width: 1200,
+        height: 675,
+        filePrefix: 'x-post',
+        maxFileSize: 2 * 1024 * 1024,
+        defaultFormat: 'image/jpeg',
+        guides: [
+            { id: 'safe', label: 'Content Safe Area (1080×607)', w: 1080, h: 607, color: 'rgba(29,155,240,0.5)', fill: 'rgba(29,155,240,0.05)', centered: true }
+        ]
+    },
+    'ig-square': {
+        label: 'Instagram Square',
+        width: 1080,
+        height: 1080,
+        filePrefix: 'instagram-square',
+        maxFileSize: null,  // no hard limit
+        defaultFormat: 'image/jpeg',
+        guides: [
+            { id: 'grid', label: 'Grid Crop Preview (810×810)', w: 810, h: 810, color: 'rgba(225,48,108,0.5)', fill: 'rgba(225,48,108,0.05)', centered: true }
+        ]
+    },
+    'ig-story': {
+        label: 'Instagram Story / Reel',
+        width: 1080,
+        height: 1920,
+        filePrefix: 'instagram-story',
+        maxFileSize: null,
+        defaultFormat: 'image/jpeg',
+        guides: [
+            { id: 'top-safe',    label: 'Status Bar Zone (top 100px)',       type: 'rect', x: 0, y: 0,    w: 1080, h: 100,  color: 'rgba(225,48,108,0.5)', fill: 'rgba(225,48,108,0.08)' },
+            { id: 'bottom-safe', label: 'CTA / Swipe Zone (bottom 250px)',   type: 'rect', x: 0, y: 1670, w: 1080, h: 250,  color: 'rgba(225,48,108,0.5)', fill: 'rgba(225,48,108,0.08)' },
+            { id: 'content',     label: 'Content Safe Area', w: 960, h: 1520, color: 'rgba(255,255,255,0.3)', fill: 'rgba(255,255,255,0.03)', centered: true }
+        ]
+    }
+};
+
+// =============================================================================
+// BannerGuides — Renders platform-specific overlays on the Fabric canvas
+// =============================================================================
 class BannerGuides {
     constructor(canvas) {
         this.canvas = canvas;
-        this.guides = {
-            desktop: null,
-            tablet: null,
-            mobile: null
-        };
-        this.visible = {
-            desktop: true,
-            tablet: true,
-            mobile: true
-        };
-        
-        // Dimensions based on 2560x1440 
-        this.dims = {
-            full: { w: 2560, h: 1440 },
-            desktop: { w: 2560, h: 423 },
-            tablet: { w: 1855, h: 423 },
-            mobile: { w: 1546, h: 423 }
-        };
+        this.currentPreset = 'yt-banner';
+        this.guideObjects = [];            // Fabric objects currently on canvas
+        this.visible = {};                 // { guideId: true/false }
+        this._initVisibility();
+    }
+
+    /** Populate default visibility from current preset */
+    _initVisibility() {
+        const config = PLATFORM_PRESETS[this.currentPreset];
+        this.visible = {};
+        config.guides.forEach(g => { this.visible[g.id] = true; });
     }
 
     init() {
         this.render();
     }
 
+    /** Switch to a new preset, rebuild guides */
+    setPreset(presetId) {
+        if (!PLATFORM_PRESETS[presetId]) return;
+        this.currentPreset = presetId;
+        this._initVisibility();
+        this.render();
+    }
+
+    getPresetConfig() {
+        return PLATFORM_PRESETS[this.currentPreset];
+    }
+
+    /** Build / rebuild all guide shapes */
     render() {
-        // Remove existing guides
-        if (this.guides.desktop) this.canvas.remove(this.guides.desktop);
-        if (this.guides.tablet) this.canvas.remove(this.guides.tablet);
-        if (this.guides.mobile) this.canvas.remove(this.guides.mobile);
+        // Remove old guide objects
+        this.guideObjects.forEach(obj => this.canvas.remove(obj));
+        this.guideObjects = [];
 
-        const centerY = (this.dims.full.h - 423) / 2;
+        const preset = PLATFORM_PRESETS[this.currentPreset];
+        const pw = preset.width;
+        const ph = preset.height;
 
-        // Desktop (Max width, 423 height)
-        if (this.visible.desktop) {
-            this.guides.desktop = new fabric.Rect({
-                left: 0,
-                top: centerY,
-                width: 2560,
-                height: 423,
-                fill: 'rgba(255, 255, 255, 0.05)',
-                stroke: 'rgba(255, 255, 255, 0.2)',
-                strokeDashArray: [5, 5],
-                selectable: false,
-                evented: false,
-                name: 'guide-desktop'
-            });
-            this.canvas.add(this.guides.desktop);
-        }
+        preset.guides.forEach(g => {
+            if (!this.visible[g.id]) return;
 
-        // Tablet (1855 width, centered)
-        if (this.visible.tablet) {
-            const tabletX = (2560 - 1855) / 2;
-            this.guides.tablet = new fabric.Rect({
-                left: tabletX,
-                top: centerY,
-                width: 1855,
-                height: 423,
-                fill: 'rgba(255, 255, 255, 0.05)',
-                stroke: 'rgba(255, 255, 255, 0.4)',
-                strokeDashArray: [5, 5],
-                selectable: false,
-                evented: false,
-                name: 'guide-tablet'
-            });
-            this.canvas.add(this.guides.tablet);
-        }
+            if (g.type === 'circle') {
+                // Circle guide (e.g., X Header avatar zone)
+                const circle = new fabric.Circle({
+                    left: g.cx - g.radius,
+                    top: g.cy - g.radius,
+                    radius: g.radius,
+                    fill: g.fill,
+                    stroke: g.color,
+                    strokeWidth: 2,
+                    strokeDashArray: [6, 4],
+                    selectable: false,
+                    evented: false,
+                    name: 'guide-' + g.id
+                });
+                this.canvas.add(circle);
+                this.guideObjects.push(circle);
+            } else {
+                // Rectangle guide (default)
+                let left, top;
+                if (g.centered) {
+                    left = (pw - g.w) / 2;
+                    top  = (ph - g.h) / 2;
+                } else {
+                    left = g.x || 0;
+                    top  = g.y || 0;
+                }
 
-        // Mobile Safe Area (1546 width, centered)
-        if (this.visible.mobile) {
-            const mobileX = (2560 - 1546) / 2;
-            this.guides.mobile = new fabric.Rect({
-                left: mobileX,
-                top: centerY,
-                width: 1546,
-                height: 423,
-                fill: 'rgba(255, 255, 255, 0.1)',
-                stroke: 'rgba(255, 255, 255, 0.8)',
-                strokeWidth: 1,
-                selectable: false,
-                evented: false,
-                name: 'guide-mobile'
-            });
-            this.canvas.add(this.guides.mobile);
-        }
+                const rect = new fabric.Rect({
+                    left:  left,
+                    top:   top,
+                    width: g.w,
+                    height: g.h,
+                    fill: g.fill,
+                    stroke: g.color,
+                    strokeDashArray: [5, 5],
+                    selectable: false,
+                    evented: false,
+                    name: 'guide-' + g.id
+                });
+                this.canvas.add(rect);
+                this.guideObjects.push(rect);
+            }
+        });
 
         this.canvas.requestRenderAll();
     }
 
-    toggle(type, isVisible) {
-        this.visible[type] = isVisible;
+    /** Toggle an individual guide by id */
+    toggle(id, isVisible) {
+        this.visible[id] = isVisible;
         this.render();
     }
 
+    /** Bring all guides to front (after adding layers) */
     bringToFront() {
-        if (this.guides.desktop) this.canvas.bringToFront(this.guides.desktop);
-        if (this.guides.tablet) this.canvas.bringToFront(this.guides.tablet);
-        if (this.guides.mobile) this.canvas.bringToFront(this.guides.mobile);
+        this.guideObjects.forEach(obj => this.canvas.bringToFront(obj));
     }
 }

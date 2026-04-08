@@ -359,7 +359,8 @@ class UIManager {
                 const reader = new FileReader();
                 reader.onload = (f) => {
                     fabric.Image.fromURL(f.target.result, (img) => {
-                        const scale = Math.max(2560 / img.width, 1440 / img.height);
+                        const p = this.canvasManager.getPreset();
+                        const scale = Math.max(p.width / img.width, p.height / img.height);
                         img.set({
                             scaleX: scale,
                             scaleY: scale,
@@ -390,10 +391,11 @@ class UIManager {
                 const reader = new FileReader();
                 reader.onload = (f) => {
                     fabric.Image.fromURL(f.target.result, (img) => {
-                        img.scaleToWidth(400);
+                        const p = this.canvasManager.getPreset();
+                        img.scaleToWidth(Math.min(400, p.width * 0.3));
                         img.set({
-                            left: 2560 / 2,
-                            top: 1440 / 2,
+                            left: p.width / 2,
+                            top: p.height / 2,
                             originX: 'center',
                             originY: 'center'
                         });
@@ -602,56 +604,7 @@ class UIManager {
             });
         }
 
-        const checkThumbnailDisabled = (target) => {
-            if (target.checked) {
-                const thumb = document.getElementById('isThumbnail');
-                if (thumb && thumb.checked) {
-                    thumb.checked = false;
-                    document.getElementById('exportHint').innerText = 'Target: 2560 x 1440px | < 6MB';
-                    document.getElementById('exportBtnText').innerText = 'Download PNG';
-                }
-            }
-        };
-
-        const showDesktop = document.getElementById('showDesktop');
-        if (showDesktop) showDesktop.addEventListener('change', (e) => { 
-            if (this.guides) this.guides.toggle('desktop', e.target.checked); 
-            checkThumbnailDisabled(e.target); 
-        });
-
-        const showTablet = document.getElementById('showTablet');
-        if (showTablet) showTablet.addEventListener('change', (e) => { 
-            if (this.guides) this.guides.toggle('tablet', e.target.checked); 
-            checkThumbnailDisabled(e.target); 
-        });
-
-        const showMobile = document.getElementById('showMobile');
-        if (showMobile) showMobile.addEventListener('change', (e) => { 
-            if (this.guides) this.guides.toggle('mobile', e.target.checked); 
-            checkThumbnailDisabled(e.target); 
-        });
-
-        const isThumbnail = document.getElementById('isThumbnail');
-        if (isThumbnail) {
-            isThumbnail.addEventListener('change', (e) => {
-                const isThumb = e.target.checked;
-                if (isThumb) {
-                    if (document.getElementById('showDesktop')) document.getElementById('showDesktop').checked = false;
-                    if (document.getElementById('showTablet')) document.getElementById('showTablet').checked = false;
-                    if (document.getElementById('showMobile')) document.getElementById('showMobile').checked = false;
-                    if (this.guides) {
-                        this.guides.toggle('desktop', false);
-                        this.guides.toggle('tablet', false);
-                        this.guides.toggle('mobile', false);
-                    }
-                    if (document.getElementById('exportHint')) document.getElementById('exportHint').innerText = 'Target: 1280 x 720px | < 2MB';
-                    if (document.getElementById('exportBtnText')) document.getElementById('exportBtnText').innerText = 'Download PNG';
-                } else {
-                    if (document.getElementById('exportHint')) document.getElementById('exportHint').innerText = 'Target: 2560 x 1440px | < 6MB';
-                    if (document.getElementById('exportBtnText')) document.getElementById('exportBtnText').innerText = 'Download PNG';
-                }
-            });
-        }
+        // Guide toggles are now dynamically managed by CanvasManager._updateOverlayControls()
 
         const updateEffects = () => {
             const active = this.canvas.getActiveObject();
@@ -712,9 +665,10 @@ class UIManager {
     }
 
     addText() {
+        const p = this.canvasManager.getPreset();
         const text = new fabric.IText('Your Channel Name', {
-            left: 2560/2,
-            top: 1440/2,
+            left: p.width / 2,
+            top: p.height / 2,
             fontFamily: 'Inter',
             fontSize: 120,
             fill: '#ffffff',
