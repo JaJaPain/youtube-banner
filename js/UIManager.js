@@ -613,14 +613,17 @@ class UIManager {
             if (active) {
                 if (!active.effects) active.effects = { brightness: 100, contrast: 100, blur: 0 };
                 
+                const o = document.getElementById('opacitySlider').value;
                 const b = document.getElementById('brightnessSlider').value;
                 const c = document.getElementById('contrastSlider').value;
                 const bl = document.getElementById('blurSlider').value;
                 
+                active.set('opacity', parseInt(o) / 100);
                 active.effects.brightness = parseInt(b);
                 active.effects.contrast = parseInt(c);
                 active.effects.blur = parseInt(bl);
                 
+                document.getElementById('opacityVal').innerText = o + '%';
                 document.getElementById('brightnessVal').innerText = b + '%';
                 document.getElementById('contrastVal').innerText = c + '%';
                 document.getElementById('blurVal').innerText = bl + 'px';
@@ -630,7 +633,7 @@ class UIManager {
             }
         };
 
-        ['brightnessSlider', 'contrastSlider', 'blurSlider'].forEach(id => {
+        ['opacitySlider', 'brightnessSlider', 'contrastSlider', 'blurSlider'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.addEventListener('input', updateEffects);
@@ -694,6 +697,10 @@ class UIManager {
             if (layerEffectsPanel) layerEffectsPanel.style.display = 'block';
 
             // Sync Effects Sliders
+            const opacity = Math.round((obj.opacity !== undefined ? obj.opacity : 1) * 100);
+            document.getElementById('opacitySlider').value = opacity;
+            document.getElementById('opacityVal').innerText = opacity + '%';
+
             const effects = obj.effects || { brightness: 100, contrast: 100, blur: 0 };
             document.getElementById('brightnessSlider').value = effects.brightness;
             document.getElementById('brightnessVal').innerText = effects.brightness + '%';
@@ -769,7 +776,10 @@ class UIManager {
         const active = this.canvas.getActiveObject();
         if (active) {
             active.effects = { brightness: 100, contrast: 100, blur: 0 };
+            active.set('opacity', 1);
             
+            document.getElementById('opacitySlider').value = 100;
+            document.getElementById('opacityVal').innerText = '100%';
             document.getElementById('brightnessSlider').value = 100;
             document.getElementById('brightnessVal').innerText = '100%';
             document.getElementById('contrastSlider').value = 100;
