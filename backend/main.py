@@ -132,12 +132,14 @@ async def add_no_cache_header(request, call_next):
 
 class GenerateRequest(BaseModel):
     prompt: str
+    width: int = 1024
+    height: int = 576
 
 class LoadModelRequest(BaseModel):
     model_type: str = "flux"
 
 
-async def generate_via_cloud(prompt: str) -> bytes:
+async def generate_via_cloud(prompt: str, width: int = 1024, height: int = 576) -> bytes:
     """Call HF Inference API to generate an image. Returns raw PNG bytes."""
     headers = {}
     if HF_TOKEN:
@@ -146,8 +148,8 @@ async def generate_via_cloud(prompt: str) -> bytes:
     payload = {
         "inputs": prompt,
         "parameters": {
-            "width": 1024,
-            "height": 576,
+            "width": width,
+            "height": height,
         }
     }
 
@@ -218,8 +220,22 @@ def get_generation_progress():
 async def generate_banner(req: GenerateRequest):
     global generation_progress
     try:
-        banner_prompt = f"youtube banner background, wide cinematic, {req.prompt}, professional, high quality, 16:9 aspect ratio"
-        print(f"Generating image ({model_type}) for: {req.prompt}")
+        # Determine aspect ratio description for the prompt
+        gen_w = req.width
+        gen_h = req.height
+        # Clamp to valid SDXL/FLUX multiples of 8
+        gen_w = max(256, (gen_w // 8) * 8)
+        gen_h = max(256, (gen_h // 8) * 8)
+
+        if gen_w > gen_h * 1.3:
+            aspect_desc = "wide cinematic, landscape orientation, 16:9 aspect ratio"
+        elif gen_h > gen_w * 1.3:
+            aspect_desc = "vertical portrait orientation, tall composition, 9:16 aspect ratio"
+        else:
+            aspect_desc = "square composition, centered subject, 1:1 aspect ratio"
+
+        banner_prompt = f"background image, {aspect_desc}, {req.prompt}, professional, high quality"
+        print(f"Generating image ({model_type}) at {gen_w}x{gen_h} for: {req.prompt}")
 
         if (model_type == "flux" or model_type == "sdxl") and pipe is not None:
             generation_progress = 0
@@ -229,9 +245,6 @@ async def generate_banner(req: GenerateRequest):
                 generation_progress = int(((step_index + 1) / 4) * 100)
                 return callback_kwargs
 
-            # Local GPU path — fast!
-            # Since this runs in async route but blocks thread, 
-            # we should execute the actual generation in a threadpool so polling can happen.
             import asyncio
             
             def do_generate():
@@ -240,8 +253,8 @@ async def generate_banner(req: GenerateRequest):
                         prompt=banner_prompt,
                         num_inference_steps=4,
                         guidance_scale=0.0,
-                        width=1024,
-                        height=576,
+                        width=gen_w,
+                        height=gen_h,
                         callback_on_step_end=progress_callback
                     )
                 else:    
@@ -249,8 +262,8 @@ async def generate_banner(req: GenerateRequest):
                         prompt=banner_prompt,
                         num_inference_steps=4,
                         guidance_scale=0.0,
-                        width=1024,
-                        height=576,
+                        width=gen_w,
+                        height=gen_h,
                         max_sequence_length=256,
                         callback_on_step_end=progress_callback
                     )
@@ -262,7 +275,7 @@ async def generate_banner(req: GenerateRequest):
             img_bytes = buffered.getvalue()
         else:
             # Cloud API fallback
-            img_bytes = await generate_via_cloud(banner_prompt)
+            img_bytes = await generate_via_cloud(banner_prompt, gen_w, gen_h)
 
         img_str = base64.b64encode(img_bytes).decode("utf-8")
 

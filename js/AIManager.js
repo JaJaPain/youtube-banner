@@ -129,10 +129,15 @@ class AIManager {
         }
 
         try {
+            // Get generation dimensions from the active preset
+            const preset = canvasManager ? canvasManager.getPreset() : { genWidth: 1024, genHeight: 576 };
+            const genW = preset.genWidth || 1024;
+            const genH = preset.genHeight || 576;
+
             const response = await fetch('http://127.0.0.1:8085/generate-banner', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt })
+                body: JSON.stringify({ prompt: prompt, width: genW, height: genH })
             });
 
             if (!response.ok) {

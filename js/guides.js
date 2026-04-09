@@ -6,19 +6,21 @@ const PLATFORM_PRESETS = {
         label: 'YouTube Banner',
         width: 2560,
         height: 1440,
+        genWidth: 1024, genHeight: 576,   // 16:9 landscape
         filePrefix: 'youtube-banner',
         maxFileSize: 6 * 1024 * 1024,  // 6 MB
         defaultFormat: 'image/png',
         guides: [
-            { id: 'desktop', label: 'Desktop Area (2560×423)',   w: 2560, h: 423, color: 'rgba(255,255,255,0.2)',  fill: 'rgba(255,255,255,0.05)', centered: true },
-            { id: 'tablet',  label: 'Tablet Area (1855×423)',    w: 1855, h: 423, color: 'rgba(255,255,255,0.4)',  fill: 'rgba(255,255,255,0.05)', centered: true },
-            { id: 'mobile',  label: 'Safe Area (1546×423)',      w: 1546, h: 423, color: 'rgba(255,255,255,0.8)',  fill: 'rgba(255,255,255,0.10)', centered: true }
+            { id: 'desktop', label: 'Desktop Area (2560×423)',   w: 2560, h: 423, color: 'rgba(59,130,246,0.6)',   fill: 'rgba(59,130,246,0.06)',  strokeWidth: 2, centered: true },
+            { id: 'tablet',  label: 'Tablet Area (1855×423)',    w: 1855, h: 423, color: 'rgba(168,85,247,0.7)',   fill: 'rgba(168,85,247,0.06)', strokeWidth: 2, centered: true },
+            { id: 'mobile',  label: 'Safe Area (1546×423)',      w: 1546, h: 423, color: 'rgba(34,197,94,0.85)',   fill: 'rgba(34,197,94,0.08)',  strokeWidth: 2, centered: true }
         ]
     },
     'yt-thumbnail': {
         label: 'YouTube Thumbnail',
         width: 1280,
         height: 720,
+        genWidth: 1024, genHeight: 576,   // 16:9 landscape
         filePrefix: 'youtube-thumbnail',
         maxFileSize: 2 * 1024 * 1024,
         defaultFormat: 'image/png',
@@ -30,6 +32,7 @@ const PLATFORM_PRESETS = {
         label: 'X Header',
         width: 1500,
         height: 500,
+        genWidth: 1024, genHeight: 344,   // 3:1 ultra-wide
         filePrefix: 'x-header',
         maxFileSize: 2 * 1024 * 1024,  // X enforces 2 MB
         defaultFormat: 'image/jpeg',
@@ -42,6 +45,7 @@ const PLATFORM_PRESETS = {
         label: 'X Post',
         width: 1200,
         height: 675,
+        genWidth: 1024, genHeight: 576,   // 16:9 landscape
         filePrefix: 'x-post',
         maxFileSize: 2 * 1024 * 1024,
         defaultFormat: 'image/jpeg',
@@ -53,6 +57,7 @@ const PLATFORM_PRESETS = {
         label: 'Instagram Square',
         width: 1080,
         height: 1080,
+        genWidth: 1024, genHeight: 1024,  // 1:1 square
         filePrefix: 'instagram-square',
         maxFileSize: null,  // no hard limit
         defaultFormat: 'image/jpeg',
@@ -64,6 +69,7 @@ const PLATFORM_PRESETS = {
         label: 'Instagram Story / Reel',
         width: 1080,
         height: 1920,
+        genWidth: 576, genHeight: 1024,   // 9:16 portrait
         filePrefix: 'instagram-story',
         maxFileSize: null,
         defaultFormat: 'image/jpeg',
@@ -157,6 +163,7 @@ class BannerGuides {
                     height: g.h,
                     fill: g.fill,
                     stroke: g.color,
+                    strokeWidth: g.strokeWidth || 1,
                     strokeDashArray: [5, 5],
                     selectable: false,
                     evented: false,

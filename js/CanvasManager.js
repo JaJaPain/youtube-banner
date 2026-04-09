@@ -185,13 +185,12 @@ class CanvasManager {
 
     clearCanvas() {
         if (confirm('Clear all layers?')) {
-            const objects = this.canvas.getObjects();
-            for (let i = objects.length - 1; i >= 0; i--) {
-                const obj = objects[i];
-                if (!obj.name || !obj.name.startsWith('guide')) {
-                    this.canvas.remove(obj);
-                }
-            }
+            // Collect non-guide objects first (don't mutate while iterating)
+            const toRemove = this.canvas.getObjects().filter(obj => {
+                return !obj.name || !obj.name.startsWith('guide-');
+            });
+            toRemove.forEach(obj => this.canvas.remove(obj));
+
             this.canvas.setBackgroundColor('#000000', this.canvas.renderAll.bind(this.canvas));
             document.getElementById('bgColor').value = '#000000';
             this.canvas.fire('object:modified');
