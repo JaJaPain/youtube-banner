@@ -92,6 +92,17 @@ class CanvasManager {
             label.appendChild(document.createTextNode(' ' + g.label));
             container.appendChild(label);
         });
+
+        // Add info tooltip explaining what the guides mean
+        const divider = document.createElement('div');
+        divider.style.cssText = 'width: 1px; height: 16px; background: var(--border-color); margin: 0 8px;';
+        container.appendChild(divider);
+
+        const info = document.createElement('span');
+        info.innerText = 'ⓘ';
+        info.title = 'Dashed lines = Safe Zones. Keep important content INSIDE these lines — content outside may be cropped by the platform. Content beyond the canvas edge will be cut off entirely.';
+        info.style.cssText = 'cursor: help; font-size: 0.85rem; color: var(--text-secondary); opacity: 0.7;';
+        container.appendChild(info);
     }
 
     /** Update the export hint text and size-warning state */
