@@ -364,8 +364,10 @@ class UIManager {
                         img.set({
                             scaleX: scale,
                             scaleY: scale,
-                            left: 0,
-                            top: 0,
+                            left: p.width / 2,
+                            top: p.height / 2,
+                            originX: 'center',
+                            originY: 'center',
                             selectable: false,
                             evented: false,
                             name: 'background'

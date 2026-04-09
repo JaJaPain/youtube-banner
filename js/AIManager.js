@@ -153,8 +153,10 @@ class AIManager {
                 img.set({
                     scaleX: scale,
                     scaleY: scale,
-                    left: 0,
-                    top: 0,
+                    left: preset.width / 2,
+                    top: preset.height / 2,
+                    originX: 'center',
+                    originY: 'center',
                     selectable: false,
                     evented: false,
                     name: 'background'

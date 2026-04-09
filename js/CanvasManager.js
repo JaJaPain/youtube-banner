@@ -11,6 +11,9 @@ class CanvasManager {
             stopContextMenu: true
         });
 
+        // Clip canvas content to the preset boundaries
+        this.updateClipPath();
+
         this.setupNavigation();
         
         window.addEventListener('resize', () => {
@@ -19,6 +22,18 @@ class CanvasManager {
                 height: this.wrapper.clientHeight - 80
             });
             this.resetView();
+        });
+    }
+
+    /** Clip rendering to the logical canvas area so nothing overflows */
+    updateClipPath() {
+        const preset = this.getPreset();
+        this.canvas.clipPath = new fabric.Rect({
+            left: 0,
+            top: 0,
+            width: preset.width,
+            height: preset.height,
+            absolutePositioned: true
         });
     }
 
@@ -37,6 +52,9 @@ class CanvasManager {
 
         // Update guides
         guidesManager.setPreset(presetId);
+
+        // Update clip path to match new dimensions
+        this.updateClipPath();
 
         // Reset the viewport to fit the new dimensions
         this.resetView();
