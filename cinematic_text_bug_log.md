@@ -42,3 +42,16 @@
 - `js/CanvasManager.js`: DPI/multiplier adjustments.
 - `backend/main.py`: Debug logging added.
 - `backend/text_integration.py`: Investigated for coordinate math errors.
+
+---
+
+## 🛑 ROOT CAUSE DISCOVERED (Post-Log Analysis)
+The fundamental failure is not just coordinate math or Retina scaling; it is a **Rendering Core Discrepancy**:
+
+1.  **Fabric.js (Frontend):** A font size of `120` results in text that fits within a 1280px wide canvas.
+2.  **Pillow/PIL (Backend):** The exact same font file at size `120` (as verified via terminal testing) results in a width of **1,969 pixels**.
+3.  **The Result:** Because the backend text is nearly 2x larger than the frontend text, the "Bake In" process results in massive, chopped-off characters regardless of whether the center point is correct.
+
+### Recommendation for Next Session:
+**Shift from "Parameter-based" to "Pixel-based" Integration.**
+Instead of sending text properties (Size, Font Name, String), the frontend should send a **transparent PNG mask of the text layer**. This eliminates all renderer size mismatches and DPI issues once and for all.
