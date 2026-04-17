@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.loadSelectedLocalModel = () => aiManager.loadSelectedLocalModel();
     window.resetView = () => canvasManager.resetView();
     window.uiManager = uiManager;
+    window.applyCinematicText = () => uiManager.applyCinematicText();
 
     /** Called when the Canvas Preset dropdown changes */
     window.applyPreset = (selectElement) => {

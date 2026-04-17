@@ -8,6 +8,8 @@ import os
 import httpx
 from io import BytesIO
 from contextlib import asynccontextmanager
+from PIL import Image
+from text_integration import apply_cinematic_text
 
 # ============================================================================
 # CRITICAL: Redirect HuggingFace model cache to D: drive.
@@ -137,6 +139,22 @@ class GenerateRequest(BaseModel):
 
 class LoadModelRequest(BaseModel):
     model_type: str = "flux"
+
+class CinematicTextRequest(BaseModel):
+    image_b64: str
+    text: str
+    font_name: str = "arial"
+    font_size: int = 150
+    blend_mode: str = "soft_light"
+    # Text transform properties (matching fabric.js canvas object)
+    text_x: float = 0
+    text_y: float = 0
+    text_angle: float = 0
+    text_fill: str = ""          # User's chosen color (hex), empty = auto-detect
+    text_scale_x: float = 1.0
+    text_scale_y: float = 1.0
+    text_origin_x: str = "left"
+    text_origin_y: str = "top"
 
 
 async def generate_via_cloud(prompt: str, width: int = 1024, height: int = 576) -> bytes:
@@ -288,6 +306,169 @@ async def generate_banner(req: GenerateRequest):
         raise
     except Exception as e:
         print(f"Generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Font resolution helpers
+# ---------------------------------------------------------------------------
+FONT_CACHE_DIR = os.path.join(os.path.dirname(__file__), ".font_cache")
+os.makedirs(FONT_CACHE_DIR, exist_ok=True)
+
+# Map of known Google Font family → filename as served by fonts.google.com
+_GOOGLE_FONT_MAP = {
+    "Almendra Display": "AlmendraDisplay",
+    "Amatic SC": "AmaticSC",
+    "Anton": "Anton",
+    "Archivo Black": "ArchivoBlack",
+    "Audiowide": "Audiowide",
+    "Bangers": "Bangers",
+    "Barlow Condensed": "BarlowCondensed",
+    "Bebas Neue": "BebasNeue",
+    "Belanosima": "Belanosima",
+    "Bricolage Grotesque": "BricolageGrotesque",
+    "Caveat": "Caveat",
+    "Chivo": "Chivo",
+    "Cinzel": "Cinzel",
+    "Cormorant Garamond": "CormorantGaramond",
+    "Covered By Your Grace": "CoveredByYourGrace",
+    "Creepster": "Creepster",
+    "Exo 2": "Exo2",
+    "Frijole": "Frijole",
+    "Gloria Hallelujah": "GloriaHallelujah",
+    "IM Fell English SC": "IMFellEnglishSC",
+    "Indie Flower": "IndieFlower",
+    "Inter": "Inter",
+    "Kanit": "Kanit",
+    "Knewave": "Knewave",
+    "Luckiest Guy": "LuckiestGuy",
+    "MedievalSharp": "MedievalSharp",
+    "Metal Mania": "MetalMania",
+    "Michroma": "Michroma",
+    "Montserrat": "Montserrat",
+    "New Rocker": "NewRocker",
+    "Nosifer": "Nosifer",
+    "Orbitron": "Orbitron",
+    "Oswald": "Oswald",
+    "Outfit": "Outfit",
+    "Permanent Marker": "PermanentMarker",
+    "Pirata One": "PirataOne",
+    "Playfair Display": "PlayfairDisplay",
+    "Poppins": "Poppins",
+    "Press Start 2P": "PressStart2P",
+    "Quantico": "Quantico",
+    "Raleway": "Raleway",
+    "Reenie Beanie": "ReenieBeanie",
+    "Righteous": "Righteous",
+    "Roboto": "Roboto",
+    "Roboto Condensed": "RobotoCondensed",
+    "Rock Salt": "RockSalt",
+    "Ruslan Display": "RuslanDisplay",
+    "Rye": "Rye",
+    "Shadows Into Light": "ShadowsIntoLight",
+    "Shojumaru": "Shojumaru",
+    "Space Grotesk": "SpaceGrotesk",
+    "Special Elite": "SpecialElite",
+    "Syncopate": "Syncopate",
+    "Syne": "Syne",
+    "Teko": "Teko",
+    "Titillium Web": "TitilliumWeb",
+    "UnifrakturMaguntia": "UnifrakturMaguntia",
+    "Urbanist": "Urbanist",
+}
+
+
+def _resolve_font(font_name: str) -> str:
+    """
+    Resolve a font family name to a local .ttf path.
+    Strategy:
+      1. Check the local .font_cache for a previously downloaded file.
+      2. Try common Windows font names.
+      3. Download from Google Fonts API as a last resort.
+      4. Fall back to arial.ttf.
+    """
+    # 1. Check cache
+    safe_name = font_name.replace(" ", "")
+    cached = os.path.join(FONT_CACHE_DIR, f"{safe_name}-Regular.ttf")
+    if os.path.exists(cached):
+        return cached
+
+    # 2. Windows fonts (exact name match)
+    win_fonts = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
+    win_candidates = [
+        f"{safe_name}.ttf",
+        f"{safe_name}-Regular.ttf",
+        f"{font_name.lower().replace(' ', '')}.ttf",
+        f"{font_name.lower()}.ttf",
+    ]
+    for candidate in win_candidates:
+        p = os.path.join(win_fonts, candidate)
+        if os.path.exists(p):
+            return p
+
+    # 3. Try downloading from Google Fonts (any font name)
+    try:
+        import urllib.request
+        css_url = f"https://fonts.googleapis.com/css2?family={font_name.replace(' ', '+')}&display=swap"
+        req = urllib.request.Request(css_url, headers={
+            "User-Agent": "Mozilla/5.0"   # Google Fonts returns TTF for this UA
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            css_text = resp.read().decode("utf-8")
+        
+        # Parse the first url(...) from the CSS response
+        import re
+        url_match = re.search(r'url\((https://fonts\.gstatic\.com/[^)]+)\)', css_text)
+        if url_match:
+            font_url = url_match.group(1)
+            print(f"Downloading font '{font_name}' from {font_url}")
+            urllib.request.urlretrieve(font_url, cached)
+            if os.path.exists(cached):
+                return cached
+    except Exception as e:
+        print(f"Google Font download failed for '{font_name}': {e}")
+
+    # 4. Ultimate fallback
+    fallback = os.path.join(win_fonts, "arial.ttf")
+    if os.path.exists(fallback):
+        return fallback
+    return "arial.ttf"
+
+
+@app.post("/api/integrate-cinematic-text")
+async def integrate_cinematic_text_endpoint(req: CinematicTextRequest):
+    try:
+        # Decode base64
+        if "," in req.image_b64:
+            _, encoded = req.image_b64.split(",", 1)
+        else:
+            encoded = req.image_b64
+        
+        img_data = base64.b64decode(encoded)
+        base_image = Image.open(BytesIO(img_data)).convert("RGBA")
+        
+        font_path = _resolve_font(req.font_name)
+        print(f"Cinematic text: '{req.text}' | font={req.font_name} -> {font_path} | "
+              f"size={req.font_size} | scale=({req.text_scale_x:.2f},{req.text_scale_y:.2f}) | "
+              f"pos=({req.text_x:.0f},{req.text_y:.0f}) | "
+              f"angle={req.text_angle:.1f} | fill={req.text_fill} | blend={req.blend_mode}")
+            
+        final_img = apply_cinematic_text(
+            base_image, req.text, font_path, req.font_size, req.blend_mode,
+            text_x=req.text_x, text_y=req.text_y,
+            text_angle=req.text_angle,
+            text_fill=req.text_fill if req.text_fill else None,
+            text_scale_x=req.text_scale_x, text_scale_y=req.text_scale_y,
+            text_origin_x=req.text_origin_x, text_origin_y=req.text_origin_y,
+        )
+        
+        buffered = BytesIO()
+        final_img.save(buffered, format="PNG")
+        out_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        
+        return {"image": f"data:image/png;base64,{out_b64}"}
+    except Exception as e:
+        print(f"Text integration error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

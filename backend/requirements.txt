@@ -6,7 +6,9 @@ transformers
 accelerate
 bitsandbytes
 pydantic
+numpy
 pillow
+httpx
 python-multipart
 torchvision
 peft

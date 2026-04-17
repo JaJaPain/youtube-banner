@@ -805,4 +805,186 @@ class UIManager {
             this.canvas.fire('object:modified'); // Trigger history save
         }
     }
+
+    /**
+     * Sends the entire canvas (flattened) + the selected text's properties
+     * to the backend cinematic-text pipeline, then replaces the background
+     * with the composited result.
+     *
+     * Canvas capture follows the same zoom-reset pattern used by exportBanner()
+     * to produce a pixel-perfect full-resolution snapshot.
+     */
+    async applyCinematicText() {
+        const activeObj = this.canvas.getActiveObject();
+        if (!activeObj || (activeObj.type !== 'i-text' && activeObj.type !== 'text')) {
+            alert('Please select a text element first.');
+            return;
+        }
+
+        const btn = document.getElementById('cinematicTextBtn');
+        const status = document.getElementById('cinematicStatus');
+
+        // --- show working state ---
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.innerHTML = '<i data-lucide="loader" style="width:14px;height:14px;animation:spin 1s linear infinite"></i> Processing...';
+        if (window.lucide) lucide.createIcons({ root: btn });
+
+        status.style.display = 'block';
+        status.style.color = '#3b82f6';
+        status.style.background = 'rgba(59, 130, 246, 0.1)';
+        status.style.border = '1px solid rgba(59, 130, 246, 0.2)';
+        status.textContent = 'Analyzing lighting & compositing...';
+
+        try {
+            // Grab the text value and font info from the selected object
+            const text = activeObj.text || '';
+            const fontSize = activeObj.fontSize || 120;
+            const fontFamily = activeObj.fontFamily || 'Arial';
+            const blendMode = document.getElementById('cinematicBlendMode').value || 'soft_light';
+
+            // ================================================================
+            // CAPTURE CANVAS — mirror the exportBanner() zoom-reset pattern
+            // ================================================================
+            const preset = this.canvasManager.getPreset();
+            const exportW = preset.width;
+            const exportH = preset.height;
+
+            // Save current view state
+            const currentZoom = this.canvas.getZoom();
+            const currentVpt = this.canvas.viewportTransform.slice();
+            const originalWidth = this.canvas.getWidth();
+            const originalHeight = this.canvas.getHeight();
+
+            // Hide guides + the text element we're baking
+            const guideVisibility = {};
+            this.canvas.getObjects().forEach(obj => {
+                if (obj.name && obj.name.startsWith('guide-')) {
+                    guideVisibility[obj.name] = obj.visible;
+                    obj.visible = false;
+                }
+            });
+            activeObj.visible = false;
+
+            // Deselect to remove handles
+            this.canvas.discardActiveObject();
+
+            // Set canvas to full export resolution at zoom 1
+            this.canvas.setWidth(exportW);
+            this.canvas.setHeight(exportH);
+            this.canvas.setZoom(1);
+            this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+            this.canvas.renderAll();
+
+            // Capture at exact logical resolution (ignore retina scaling)
+            const dataUrl = this.canvas.toDataURL({
+                format: 'png',
+                multiplier: 1 / (window.devicePixelRatio || 1)
+            });
+
+            // Restore view state immediately
+            activeObj.visible = true;
+            this.canvas.getObjects().forEach(obj => {
+                if (obj.name && guideVisibility[obj.name] !== undefined) {
+                    obj.visible = guideVisibility[obj.name];
+                }
+            });
+            this.canvas.setWidth(originalWidth);
+            this.canvas.setHeight(originalHeight);
+            this.canvas.setZoom(currentZoom);
+            this.canvas.setViewportTransform(currentVpt);
+            this.canvas.renderAll();
+
+            // ================================================================
+            // CALL BACKEND
+            // ================================================================
+            const response = await fetch('http://127.0.0.1:8085/api/integrate-cinematic-text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    image_b64: dataUrl,
+                    text: text,
+                    font_name: fontFamily,
+                    font_size: fontSize,
+                    blend_mode: blendMode,
+                    // Text transform properties for exact positioning
+                    text_x: activeObj.getCenterPoint().x,
+                    text_y: activeObj.getCenterPoint().y,
+                    text_angle: activeObj.angle || 0,
+                    text_fill: activeObj.fill || '#FFFFFF',
+                    text_scale_x: activeObj.scaleX || 1,
+                    text_scale_y: activeObj.scaleY || 1,
+                    text_origin_x: 'center',
+                    text_origin_y: 'center'
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.detail || `Server error: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            // Replace the background with the composited result
+            fabric.Image.fromURL(result.image, (img) => {
+                // ============================================================
+                // PRE-BAKE SAFETY: force-save current state for clean undo
+                // ============================================================
+                this.historyManager.saveHistory();
+
+                // Suppress intermediate history events during canvas mutations
+                this.historyManager.isProcessing = true;
+
+                const p = this.canvasManager.getPreset();
+                const scale = Math.max(p.width / img.width, p.height / img.height);
+                img.set({
+                    scaleX: scale,
+                    scaleY: scale,
+                    left: p.width / 2,
+                    top: p.height / 2,
+                    originX: 'center',
+                    originY: 'center',
+                    selectable: false,
+                    evented: false,
+                    name: 'background'
+                });
+
+                const oldBg = this.canvas.getObjects().find(o => o.name === 'background');
+                if (oldBg) this.canvas.remove(oldBg);
+
+                this.canvas.insertAt(img, 0);
+
+                // Remove the original text element (it's now baked into the image)
+                this.canvas.remove(activeObj);
+
+                if (this.guides) this.guides.bringToFront();
+                this.canvas.renderAll();
+
+                // Unlock history and save the post-bake state as one clean snapshot
+                this.historyManager.isProcessing = false;
+                this.historyManager.saveHistory();
+                this.updateLayersList();
+
+                status.style.color = '#10b981';
+                status.style.background = 'rgba(16, 185, 129, 0.1)';
+                status.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+                status.textContent = 'Text baked in successfully! (Ctrl+Z to undo)';
+
+                setTimeout(() => { status.style.display = 'none'; }, 4000);
+            }, { crossOrigin: 'anonymous' });
+
+        } catch (err) {
+            console.error('Cinematic text error:', err);
+            status.style.color = '#ef4444';
+            status.style.background = 'rgba(239, 68, 68, 0.1)';
+            status.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            status.textContent = `Error: ${err.message}`;
+        } finally {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.innerHTML = '<i data-lucide="sparkles" style="width:14px;height:14px"></i> Bake In';
+            if (window.lucide) lucide.createIcons({ root: btn });
+        }
+    }
 }

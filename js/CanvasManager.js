@@ -266,12 +266,17 @@ class CanvasManager {
             String(now.getSeconds()).padStart(2, '0');
         const fileName = `${preset.filePrefix}_${dateStr}${ext}`;
 
-        const rawCanvas = this.canvas.getElement();
-
         try {
-            let blob = await new Promise(resolve => {
-                rawCanvas.toBlob(b => resolve(b), format, quality);
+            // Use fabric's toDataURL to strip Retina device scaling (multiplier 1)
+            const dataUrl = this.canvas.toDataURL({
+                format: format === 'image/jpeg' ? 'jpeg' : 'png',
+                quality: quality,
+                multiplier: 1 / (window.devicePixelRatio || 1)
             });
+            
+            // Convert dataURL to Blob
+            const res = await fetch(dataUrl);
+            let blob = await res.blob();
 
             if (!blob) {
                 alert('Export failed — the canvas may be tainted by cross-origin images.');
