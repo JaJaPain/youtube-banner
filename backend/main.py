@@ -142,15 +142,16 @@ class LoadModelRequest(BaseModel):
 
 class CinematicTextRequest(BaseModel):
     image_b64: str
-    text: str
+    text_mask_b64: str = ""      # Pre-rendered transparent PNG mask from Fabric.js
+    blend_mode: str = "soft_light"
+    text_fill: str = ""          # User's chosen color (hex), empty = auto-detect
+    # Legacy fields kept for backward compat (ignored when text_mask_b64 is set)
+    text: str = ""
     font_name: str = "arial"
     font_size: int = 150
-    blend_mode: str = "soft_light"
-    # Text transform properties (matching fabric.js canvas object)
     text_x: float = 0
     text_y: float = 0
     text_angle: float = 0
-    text_fill: str = ""          # User's chosen color (hex), empty = auto-detect
     text_scale_x: float = 1.0
     text_scale_y: float = 1.0
     text_origin_x: str = "left"
@@ -438,7 +439,7 @@ def _resolve_font(font_name: str) -> str:
 @app.post("/api/integrate-cinematic-text")
 async def integrate_cinematic_text_endpoint(req: CinematicTextRequest):
     try:
-        # Decode base64
+        # Decode base64 background image
         if "," in req.image_b64:
             _, encoded = req.image_b64.split(",", 1)
         else:
@@ -447,20 +448,45 @@ async def integrate_cinematic_text_endpoint(req: CinematicTextRequest):
         img_data = base64.b64decode(encoded)
         base_image = Image.open(BytesIO(img_data)).convert("RGBA")
         
-        font_path = _resolve_font(req.font_name)
-        print(f"Cinematic text: '{req.text}' | font={req.font_name} -> {font_path} | "
-              f"size={req.font_size} | scale=({req.text_scale_x:.2f},{req.text_scale_y:.2f}) | "
-              f"pos=({req.text_x:.0f},{req.text_y:.0f}) | "
-              f"angle={req.text_angle:.1f} | fill={req.text_fill} | blend={req.blend_mode}")
+        if req.text_mask_b64:
+            # ============================================================
+            # PIXEL-BASED PATH (new) — use the pre-rendered mask from
+            # Fabric.js, eliminating font rendering discrepancies.
+            # ============================================================
+            if "," in req.text_mask_b64:
+                _, mask_encoded = req.text_mask_b64.split(",", 1)
+            else:
+                mask_encoded = req.text_mask_b64
             
-        final_img = apply_cinematic_text(
-            base_image, req.text, font_path, req.font_size, req.blend_mode,
-            text_x=req.text_x, text_y=req.text_y,
-            text_angle=req.text_angle,
-            text_fill=req.text_fill if req.text_fill else None,
-            text_scale_x=req.text_scale_x, text_scale_y=req.text_scale_y,
-            text_origin_x=req.text_origin_x, text_origin_y=req.text_origin_y,
-        )
+            mask_data = base64.b64decode(mask_encoded)
+            text_mask_image = Image.open(BytesIO(mask_data)).convert("RGBA")
+            
+            print(f"Cinematic text (pixel-based): mask={text_mask_image.size} | "
+                  f"bg={base_image.size} | fill={req.text_fill} | blend={req.blend_mode}")
+            
+            from text_integration import apply_cinematic_text_from_mask
+            final_img = apply_cinematic_text_from_mask(
+                base_image, text_mask_image, req.blend_mode,
+                text_fill=req.text_fill if req.text_fill else None,
+            )
+        else:
+            # ============================================================
+            # LEGACY PATH — parameter-based (kept for backward compat)
+            # ============================================================
+            font_path = _resolve_font(req.font_name)
+            print(f"Cinematic text (legacy): '{req.text}' | font={req.font_name} -> {font_path} | "
+                  f"size={req.font_size} | scale=({req.text_scale_x:.2f},{req.text_scale_y:.2f}) | "
+                  f"pos=({req.text_x:.0f},{req.text_y:.0f}) | "
+                  f"angle={req.text_angle:.1f} | fill={req.text_fill} | blend={req.blend_mode}")
+                
+            final_img = apply_cinematic_text(
+                base_image, req.text, font_path, req.font_size, req.blend_mode,
+                text_x=req.text_x, text_y=req.text_y,
+                text_angle=req.text_angle,
+                text_fill=req.text_fill if req.text_fill else None,
+                text_scale_x=req.text_scale_x, text_scale_y=req.text_scale_y,
+                text_origin_x=req.text_origin_x, text_origin_y=req.text_origin_y,
+            )
         
         buffered = BytesIO()
         final_img.save(buffered, format="PNG")

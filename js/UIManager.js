@@ -807,12 +807,15 @@ class UIManager {
     }
 
     /**
-     * Sends the entire canvas (flattened) + the selected text's properties
-     * to the backend cinematic-text pipeline, then replaces the background
-     * with the composited result.
+     * Sends the entire canvas (flattened) + a pixel-perfect transparent PNG
+     * mask of the text layer to the backend cinematic-text pipeline.
      *
-     * Canvas capture follows the same zoom-reset pattern used by exportBanner()
-     * to produce a pixel-perfect full-resolution snapshot.
+     * PIXEL-BASED APPROACH: Instead of sending text properties (font name,
+     * size, string) and letting Pillow re-render (which produces differently-
+     * sized glyphs), we rasterize the text via Fabric.js into a transparent
+     * PNG at the exact canvas resolution. The backend uses this mask directly
+     * for all lighting, shadow, and blending effects — zero rendering
+     * discrepancy.
      */
     async applyCinematicText() {
         const activeObj = this.canvas.getActiveObject();
@@ -837,10 +840,6 @@ class UIManager {
         status.textContent = 'Analyzing lighting & compositing...';
 
         try {
-            // Grab the text value and font info from the selected object
-            const text = activeObj.text || '';
-            const fontSize = activeObj.fontSize || 120;
-            const fontFamily = activeObj.fontFamily || 'Arial';
             const blendMode = document.getElementById('cinematicBlendMode').value || 'soft_light';
 
             // ================================================================
@@ -856,7 +855,7 @@ class UIManager {
             const originalWidth = this.canvas.getWidth();
             const originalHeight = this.canvas.getHeight();
 
-            // Hide guides + the text element we're baking
+            // Hide guides
             const guideVisibility = {};
             this.canvas.getObjects().forEach(obj => {
                 if (obj.name && obj.name.startsWith('guide-')) {
@@ -864,7 +863,6 @@ class UIManager {
                     obj.visible = false;
                 }
             });
-            activeObj.visible = false;
 
             // Deselect to remove handles
             this.canvas.discardActiveObject();
@@ -874,15 +872,38 @@ class UIManager {
             this.canvas.setHeight(exportH);
             this.canvas.setZoom(1);
             this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-            this.canvas.renderAll();
 
-            // Capture at exact logical resolution (ignore retina scaling)
-            const dataUrl = this.canvas.toDataURL({
+            // ---- PASS 1: Capture background WITHOUT the text element ----
+            activeObj.visible = false;
+            this.canvas.renderAll();
+            const bgDataUrl = this.canvas.toDataURL({
                 format: 'png',
                 multiplier: 1 / (window.devicePixelRatio || 1)
             });
 
-            // Restore view state immediately
+            // ---- PASS 2: Capture ONLY the text element as a transparent mask ----
+            // Hide everything except the text object
+            const objectVisibility = [];
+            this.canvas.getObjects().forEach(obj => {
+                if (obj === activeObj) return;
+                objectVisibility.push({ obj, visible: obj.visible });
+                obj.visible = false;
+            });
+            activeObj.visible = true;
+
+            // Set a transparent background for the mask capture
+            const savedBgColor = this.canvas.backgroundColor;
+            this.canvas.setBackgroundColor('rgba(0,0,0,0)', () => {});
+            this.canvas.renderAll();
+
+            const textMaskDataUrl = this.canvas.toDataURL({
+                format: 'png',
+                multiplier: 1 / (window.devicePixelRatio || 1)
+            });
+
+            // ---- Restore everything ----
+            this.canvas.setBackgroundColor(savedBgColor, () => {});
+            objectVisibility.forEach(item => { item.obj.visible = item.visible; });
             activeObj.visible = true;
             this.canvas.getObjects().forEach(obj => {
                 if (obj.name && guideVisibility[obj.name] !== undefined) {
@@ -895,27 +916,23 @@ class UIManager {
             this.canvas.setViewportTransform(currentVpt);
             this.canvas.renderAll();
 
+            // Determine the text fill color (solid hex only; patterns → white)
+            let textFillHex = '#FFFFFF';
+            if (typeof activeObj.fill === 'string' && activeObj.fill.startsWith('#')) {
+                textFillHex = activeObj.fill;
+            }
+
             // ================================================================
-            // CALL BACKEND
+            // CALL BACKEND — pixel-based payload
             // ================================================================
             const response = await fetch('http://127.0.0.1:8085/api/integrate-cinematic-text', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    image_b64: dataUrl,
-                    text: text,
-                    font_name: fontFamily,
-                    font_size: fontSize,
+                    image_b64: bgDataUrl,
+                    text_mask_b64: textMaskDataUrl,
                     blend_mode: blendMode,
-                    // Text transform properties for exact positioning
-                    text_x: activeObj.getCenterPoint().x,
-                    text_y: activeObj.getCenterPoint().y,
-                    text_angle: activeObj.angle || 0,
-                    text_fill: activeObj.fill || '#FFFFFF',
-                    text_scale_x: activeObj.scaleX || 1,
-                    text_scale_y: activeObj.scaleY || 1,
-                    text_origin_x: 'center',
-                    text_origin_y: 'center'
+                    text_fill: textFillHex
                 })
             });
 

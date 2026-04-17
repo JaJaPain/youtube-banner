@@ -356,6 +356,150 @@ def _apply_blend(
 
 
 # ---------------------------------------------------------------------------
+# Public API — Pixel-based (pre-rendered mask from Fabric.js)
+# ---------------------------------------------------------------------------
+def apply_cinematic_text_from_mask(
+    base_image: Image.Image,
+    text_mask_image: Image.Image,
+    blend_mode: str = "soft_light",
+    *,
+    text_fill: str = None,
+) -> Image.Image:
+    """
+    Composite a pre-rendered text mask onto *base_image* with cinematic
+    lighting effects.
+
+    Instead of rendering text from font properties (which causes size
+    mismatches between Fabric.js and Pillow), the frontend sends a
+    transparent RGBA PNG where the text pixels have alpha > 0.  This
+    function extracts the alpha channel as the text mask and runs the
+    same shadow / glow / blend / outline pipeline.
+    """
+    # --- resize mask to match background if needed ---
+    bg = base_image.convert("RGBA")
+    w, h = bg.size
+    if text_mask_image.size != (w, h):
+        text_mask_image = text_mask_image.resize((w, h), Image.Resampling.LANCZOS)
+
+    # --- extract L-mode mask from the alpha channel ---
+    text_mask = text_mask_image.split()[3]  # A channel → L mode
+
+    # --- bail out if mask is empty (no text was captured) ---
+    mask_arr = np.asarray(text_mask)
+    if mask_arr.max() == 0:
+        logger.info("Empty text mask provided; returning original image.")
+        return base_image.convert("RGB")
+
+    # --- estimate an effective font size from the mask for shadow/glow scaling ---
+    rows_any = np.any(mask_arr > 0, axis=1)
+    cols_any = np.any(mask_arr > 0, axis=0)
+    if rows_any.any() and cols_any.any():
+        y_indices = np.where(rows_any)[0]
+        text_height = int(y_indices[-1] - y_indices[0])
+    else:
+        text_height = h // 5
+    effective_font_size = max(12, text_height)
+
+    # --- memory guard: cap working resolution ---
+    img_scale = 1.0
+    if max(w, h) > _MAX_WORKING_DIM:
+        img_scale = _MAX_WORKING_DIM / max(w, h)
+        new_w = int(w * img_scale)
+        new_h = int(h * img_scale)
+        bg = bg.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        text_mask = text_mask.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        effective_font_size = max(12, int(effective_font_size * img_scale))
+        logger.info(
+            "Image downscaled from %dx%d to %dx%d for processing.",
+            w, h, new_w, new_h,
+        )
+    width, height = bg.size
+
+    # --- step 1: analyze background ---
+    info = analyze_background(bg)
+    light_color: Tuple[int, int, int] = info["light_color"]
+    light_pos: Tuple[float, float] = info["light_pos"]
+    mean_lum: float = info["mean_lum"]
+
+    logger.info(
+        "Analysis — mean lum: %.0f, light@(%.2f, %.2f), user_fill: %s",
+        mean_lum, *light_pos, text_fill or "auto",
+    )
+
+    # Clamp light color away from extremes
+    lc_arr = np.array(light_color, dtype=np.float32)
+    lc_lum = float(0.299 * lc_arr[0] + 0.587 * lc_arr[1] + 0.114 * lc_arr[2])
+    if lc_lum < 40:
+        lc_arr = np.clip(lc_arr + 60, 0, 255)
+        light_color = tuple(int(c) for c in lc_arr)
+    elif lc_lum > 245:
+        light_color = (245, 240, 230)
+
+    # --- determine fill color ---
+    if text_fill and text_fill.startswith("#") and len(text_fill) >= 7:
+        fill_r = int(text_fill[1:3], 16)
+        fill_g = int(text_fill[3:5], 16)
+        fill_b = int(text_fill[5:7], 16)
+        fill_rgb = (fill_r, fill_g, fill_b)
+    else:
+        auto_hex = info["text_fill"]
+        fill_r = int(auto_hex[1:3], 16)
+        fill_g = int(auto_hex[3:5], 16)
+        fill_b = int(auto_hex[5:7], 16)
+        fill_rgb = (fill_r, fill_g, fill_b)
+
+    # --- step 2: directional shadow (derived from mask) ---
+    shadow_layer = _render_shadow(
+        width, height, text_mask, light_pos, effective_font_size
+    )
+
+    # --- step 3: light wrap glow (derived from mask) ---
+    glow_layer = _render_light_wrap(
+        width, height, text_mask, light_color, effective_font_size
+    )
+
+    # --- step 4: text body (solid fill + subtle blend for texture) ---
+    blended_body = _apply_blend(
+        bg.convert("RGB"), fill_rgb, text_mask, mode=blend_mode, blend_strength=0.30
+    )
+
+    # --- step 4b: thin outline for readability (derived from mask) ---
+    outline_width = max(1, effective_font_size // 40)
+    outline_mask = text_mask.copy()
+    for _ in range(outline_width):
+        outline_mask = outline_mask.filter(ImageFilter.MaxFilter(3))
+    outline_arr = np.asarray(outline_mask, dtype=np.float32)
+    inner_arr = np.asarray(text_mask, dtype=np.float32)
+    ring_arr = np.clip(outline_arr - inner_arr, 0, 255).astype(np.uint8)
+
+    fill_lum = 0.299 * fill_rgb[0] + 0.587 * fill_rgb[1] + 0.114 * fill_rgb[2]
+    if fill_lum > 128:
+        outline_color = (0, 0, 0, 180)
+    else:
+        outline_color = (255, 255, 255, 180)
+
+    outline_layer = Image.new("RGBA", (width, height), outline_color[:3] + (255,))
+    ring_scaled = np.clip(ring_arr.astype(np.float32) * (outline_color[3] / 255.0), 0, 255).astype(np.uint8)
+    outline_layer.putalpha(Image.fromarray(ring_scaled, mode="L"))
+
+    # --- step 5: composite stack ---
+    final = Image.alpha_composite(bg, shadow_layer)        # 1. shadow
+    final = Image.alpha_composite(final, glow_layer)        # 2. light wrap
+    final = Image.alpha_composite(final, outline_layer)     # 3. text outline
+    final = Image.alpha_composite(final, blended_body)      # 4. text body
+
+    # clean up large intermediates
+    del shadow_layer, glow_layer, blended_body, text_mask, outline_layer
+    gc.collect()
+
+    # --- up-scale back if we down-scaled earlier ---
+    if img_scale < 1.0:
+        final = final.resize((w, h), Image.Resampling.LANCZOS)
+
+    return final.convert("RGB")
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 def apply_cinematic_text(
