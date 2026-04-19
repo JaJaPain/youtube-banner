@@ -24,9 +24,19 @@
                         <i data-lucide="redo"></i>
                     </button>
                 </div>
-                <button class="btn btn-secondary" onclick="clearCanvas()" style="width: 100%; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);" title="Clear Canvas">
-                    <i data-lucide="trash-2"></i> Clear Canvas
-                </button>
+                <div id="clearCanvasContainer">
+                    <button id="mainClearBtn" class="btn btn-secondary" onclick="showClearConfirm()" style="width: 100%; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);" title="Clear Canvas">
+                        <i data-lucide="trash-2"></i> Clear Canvas
+                    </button>
+                    <div id="clearConfirmGroup" style="display: none; width: 100%; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="executeClearCanvas()" style="flex: 1; background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: rgba(239, 68, 68, 0.4); font-size: 0.8rem;">
+                            <i data-lucide="check" style="width: 14px; height: 14px;"></i> Yes
+                        </button>
+                        <button class="btn btn-secondary" onclick="cancelClearCanvas()" style="flex: 1; font-size: 0.8rem;">
+                            <i data-lucide="x" style="width: 14px; height: 14px;"></i> No
+                        </button>
+                    </div>
+                </div>
                 <div style="display: flex; gap: 8px; margin-top: 4px;">
                     <button class="btn btn-secondary" onclick="uiManager.saveProject()" style="flex: 1;" title="Save Project (.jjp)">
                         <i data-lucide="save"></i> Save Project
@@ -55,6 +65,12 @@
                             <optgroup label="Instagram">
                                 <option value="ig-square">Instagram Square (1080×1080)</option>
                                 <option value="ig-story">Instagram Story / Reel (1080×1920)</option>
+                            </optgroup>
+                            <optgroup label="DistroKid">
+                                <option value="distrokid-cover">Album Cover (3000×3000)</option>
+                            </optgroup>
+                            <optgroup label="Spotify">
+                                <option value="spotify-canvas">Spotify Canvas (1080×1920)</option>
                             </optgroup>
                         </select>
                         <div id="presetDimsHint" style="font-size: 0.7rem; color: var(--text-secondary); text-align: center;">2560 × 1440px</div>

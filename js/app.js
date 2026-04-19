@@ -40,7 +40,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Global forwards for HTML onclick/onchange attributes
     window.historyManager = historyManager;
     window.addText = () => uiManager.addText();
-    window.clearCanvas = () => canvasManager.clearCanvas();
+    window.showClearConfirm = () => {
+        document.getElementById('mainClearBtn').style.display = 'none';
+        document.getElementById('clearConfirmGroup').style.display = 'flex';
+    };
+
+    window.cancelClearCanvas = () => {
+        document.getElementById('clearConfirmGroup').style.display = 'none';
+        document.getElementById('mainClearBtn').style.display = 'block';
+    };
+
+    window.executeClearCanvas = () => {
+        document.getElementById('clearConfirmGroup').style.display = 'none';
+        document.getElementById('mainClearBtn').style.display = 'block';
+        canvasManager.clearCanvas();
+    };
     window.exportBanner = () => canvasManager.exportBanner(guides);
     window.generateAIBanner = () => aiManager.generateAIBanner();
     window.toggleLocalModel = () => aiManager.toggleLocalModel();

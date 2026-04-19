@@ -213,17 +213,20 @@ class CanvasManager {
     }
 
     clearCanvas() {
-        if (confirm('Clear all layers?')) {
-            // Collect non-guide objects first (don't mutate while iterating)
-            const toRemove = this.canvas.getObjects().filter(obj => {
-                return !obj.name || !obj.name.startsWith('guide-');
-            });
-            toRemove.forEach(obj => this.canvas.remove(obj));
+        // Deselect active object to clear handles and trigger UI updates
+        this.canvas.discardActiveObject();
+        
+        // Collect non-guide objects first (don't mutate while iterating)
+        const toRemove = this.canvas.getObjects().filter(obj => {
+            return !obj.name || !obj.name.startsWith('guide-');
+        });
+        toRemove.forEach(obj => this.canvas.remove(obj));
 
-            this.canvas.setBackgroundColor('#000000', this.canvas.renderAll.bind(this.canvas));
-            document.getElementById('bgColor').value = '#000000';
-            this.canvas.fire('object:modified');
-        }
+        this.canvas.setBackgroundColor('#000000', this.canvas.renderAll.bind(this.canvas));
+        document.getElementById('bgColor').value = '#000000';
+        
+        this.canvas.fire('selection:cleared');
+        this.canvas.fire('object:modified');
     }
 
     async exportBanner(guidesManager) {

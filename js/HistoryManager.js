@@ -47,7 +47,10 @@ class HistoryManager {
     saveHistory() {
         if (this.isProcessing) return;
         
-        const state = JSON.stringify(this.canvas.toJSON(['name', 'selectable', 'evented']));
+        const data = this.canvas.toJSON(['name', 'selectable', 'evented']);
+        // Filter out guides from history state so they don't break preset switching
+        data.objects = data.objects.filter(obj => !obj.name || !obj.name.startsWith('guide-'));
+        const state = JSON.stringify(data);
         
         if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length - 1] === state) {
             return;
@@ -77,6 +80,7 @@ class HistoryManager {
              this.isProcessing = false;
              this.updateButtons();
              if (this.guides) {
+                 this.guides.render(); // Rebuild guides for current preset
                  this.guides.bringToFront();
              }
         });
@@ -94,6 +98,7 @@ class HistoryManager {
              this.isProcessing = false;
              this.updateButtons();
              if (this.guides) {
+                 this.guides.render(); // Rebuild guides for current preset
                  this.guides.bringToFront();
              }
         });

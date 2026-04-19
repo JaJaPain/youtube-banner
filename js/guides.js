@@ -84,6 +84,32 @@ const PLATFORM_PRESETS = {
             { id: 'bottom-safe', label: 'CTA / Swipe Zone (bottom 250px)',   type: 'rect', x: 0, y: 1670, w: 1080, h: 250,  color: 'rgba(225,48,108,0.5)', fill: 'rgba(225,48,108,0.08)' },
             { id: 'content',     label: 'Content Safe Area', w: 960, h: 1520, color: 'rgba(255,255,255,0.3)', fill: 'rgba(255,255,255,0.03)', centered: true }
         ]
+    },
+    'distrokid-cover': {
+        label: 'DistroKid Album Cover',
+        width: 3000,
+        height: 3000,
+        genWidth: 1024, genHeight: 1024,  // 1:1 square
+        filePrefix: 'distrokid-cover',
+        maxFileSize: 10 * 1024 * 1024, // 10 MB maximum
+        defaultFormat: 'image/jpeg',
+        hint: 'Note: The ENTIRE 3000×3000 area will be saved as your cover. The dashed line shows the absolute outer boundary.',
+        guides: [
+            { id: 'boundary', label: 'Cover Boundary', w: 2992, h: 2992, color: 'rgba(255,255,255,0.6)', fill: 'transparent', centered: true, isMask: false, strokeWidth: 4 }
+        ]
+    },
+    'spotify-canvas': {
+        label: 'Spotify Canvas (Vertical)',
+        width: 1080,
+        height: 1920,
+        genWidth: 576, genHeight: 1024, // 9:16 portrait
+        filePrefix: 'spotify-canvas',
+        maxFileSize: 5 * 1024 * 1024,
+        defaultFormat: 'image/jpeg',
+        hint: 'Spotify Canvas requires 1080×1920. Keep important text out of the masked UI areas at the top and bottom.',
+        guides: [
+            { id: 'safe', label: 'Content Safe Area', w: 1080, h: 1570, x: 0, y: 100, color: 'rgba(29,185,84,0.6)', fill: 'transparent', isMask: true, strokeWidth: 4 }
+        ]
     }
 };
 
@@ -160,6 +186,34 @@ class BannerGuides {
                 } else {
                     left = g.x || 0;
                     top  = g.y || 0;
+                }
+
+                if (g.isMask) {
+                    const maskColor = 'rgba(0,0,0,0.35)';
+                    // Top
+                    if (top > 0) {
+                        const topRect = new fabric.Rect({ left: 0, top: 0, width: pw, height: top, fill: maskColor, selectable: false, evented: false, name: 'guide-mask-top-' + g.id });
+                        this.canvas.add(topRect);
+                        this.guideObjects.push(topRect);
+                    }
+                    // Bottom
+                    if (top + g.h < ph) {
+                        const bottomRect = new fabric.Rect({ left: 0, top: top + g.h, width: pw, height: ph - (top + g.h), fill: maskColor, selectable: false, evented: false, name: 'guide-mask-bottom-' + g.id });
+                        this.canvas.add(bottomRect);
+                        this.guideObjects.push(bottomRect);
+                    }
+                    // Left
+                    if (left > 0) {
+                        const leftRect = new fabric.Rect({ left: 0, top: top, width: left, height: g.h, fill: maskColor, selectable: false, evented: false, name: 'guide-mask-left-' + g.id });
+                        this.canvas.add(leftRect);
+                        this.guideObjects.push(leftRect);
+                    }
+                    // Right
+                    if (left + g.w < pw) {
+                        const rightRect = new fabric.Rect({ left: left + g.w, top: top, width: pw - (left + g.w), height: g.h, fill: maskColor, selectable: false, evented: false, name: 'guide-mask-right-' + g.id });
+                        this.canvas.add(rightRect);
+                        this.guideObjects.push(rightRect);
+                    }
                 }
 
                 const rect = new fabric.Rect({
