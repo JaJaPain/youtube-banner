@@ -165,7 +165,8 @@ class AIManager {
                 const oldBg = this.canvas.getObjects().find(obj => obj.name === 'background');
                 if (oldBg) this.canvas.remove(oldBg);
                 
-                this.canvas.insertAt(img, 0);
+                const artboardExists = this.canvas.getObjects().find(o => o.name === 'artboard-bg');
+                this.canvas.insertAt(img, artboardExists ? 1 : 0);
                 this.canvas.renderAll();
                 
                 // Allow history to save this background addition

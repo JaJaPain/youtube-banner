@@ -158,6 +158,27 @@ class BannerGuides {
         const pw = preset.width;
         const ph = preset.height;
 
+        // DRAW THE GLOBAL BLEED MASK
+        // This darkens the infinite workspace outside the logical canvas bounds.
+        // It gives the user a perfect visual boundary of the final export crop, 
+        // while allowing manipulators to sit on top (controlsAboveOverlay = true).
+        const bleedSize = 200000;
+        const bleedColor = 'rgba(10,10,12,0.85)'; // Matches --bg-color but semi-transparent
+        
+        const bleedRects = [
+            new fabric.Rect({ left: -bleedSize, top: -bleedSize, width: bleedSize * 2 + pw, height: bleedSize, fill: bleedColor, selectable: false, evented: false, name: 'guide-bleed-top' }),
+            new fabric.Rect({ left: -bleedSize, top: ph, width: bleedSize * 2 + pw, height: bleedSize, fill: bleedColor, selectable: false, evented: false, name: 'guide-bleed-bottom' }),
+            new fabric.Rect({ left: -bleedSize, top: 0, width: bleedSize, height: ph, fill: bleedColor, selectable: false, evented: false, name: 'guide-bleed-left' }),
+            new fabric.Rect({ left: pw, top: 0, width: bleedSize, height: ph, fill: bleedColor, selectable: false, evented: false, name: 'guide-bleed-right' })
+        ];
+        
+        bleedRects.forEach(rect => {
+            this.canvas.add(rect);
+            this.guideObjects.push(rect);
+        });
+
+        // Now draw all the preset-specific guides inside the artboard
+
         preset.guides.forEach(g => {
             if (!this.visible[g.id]) return;
 

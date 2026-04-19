@@ -14,14 +14,14 @@ class UIManager {
         const objects = this.canvas.getObjects();
         const projectData = {
             version: '1.0',
-            backgroundColor: this.canvas.backgroundColor,
+            backgroundColor: document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#000000',
             layers: []
         };
 
         // Gather all layers while ensuring images are embedded as Base64
         const layerPromises = objects.map(async (obj) => {
-            // Ignore guides
-            if (obj.name && obj.name.startsWith('guide-')) return null;
+            // Ignore guides and the virtual artboard
+            if (obj.name && (obj.name.startsWith('guide-') || obj.name === 'artboard-bg')) return null;
 
             // Use fabric toJSON but ensure we get the custom properties we need
             // Fabric 5.x toObject includes many properties, but let's be explicit
@@ -126,16 +126,20 @@ class UIManager {
                 const currentObjects = this.canvas.getObjects();
                 for (let i = currentObjects.length - 1; i >= 0; i--) {
                     const obj = currentObjects[i];
-                    if (!obj.name || !obj.name.startsWith('guide-')) {
+                    if (!obj.name || (!obj.name.startsWith('guide-') && obj.name !== 'artboard-bg')) {
                         this.canvas.remove(obj);
                     }
                 }
 
                 // Restore background
                 if (data.backgroundColor) {
-                    this.canvas.setBackgroundColor(data.backgroundColor, this.canvas.renderAll.bind(this.canvas));
                     const bgColorInput = document.getElementById('bgColor');
                     if (bgColorInput) bgColorInput.value = data.backgroundColor;
+                    
+                    let artboard = this.canvas.getObjects().find(o => o.name === 'artboard-bg');
+                    if (artboard) {
+                        artboard.set('fill', data.backgroundColor);
+                    }
                 }
 
                 // Fabric enlivenObjects is good for reconstructing from JSON objects
@@ -202,10 +206,14 @@ class UIManager {
     setupLayersList() {
         this.updateLayersList();
         
-        // Listen to canvas events to update the list
-        this.canvas.on('object:added', () => this.updateLayersList());
-        this.canvas.on('object:removed', () => this.updateLayersList());
-        this.canvas.on('object:modified', () => this.updateLayersList());
+        // Listen to canvas events to update the list and check bleed
+        this.canvas.on('object:added', () => { this.updateLayersList(); this.canvasManager.checkBleed(); });
+        this.canvas.on('object:removed', () => { this.updateLayersList(); this.canvasManager.checkBleed(); });
+        this.canvas.on('object:modified', () => { this.updateLayersList(); this.canvasManager.checkBleed(); });
+        
+        // Real-time bleed checking during drag/resize operations
+        this.canvas.on('object:moving', () => this.canvasManager.checkBleed());
+        this.canvas.on('object:scaling', () => this.canvasManager.checkBleed());
         
         // Update selection states in real-time
         this.canvas.on('selection:created', () => this.updateLayersList());
@@ -225,7 +233,7 @@ class UIManager {
         const objects = [...this.canvas.getObjects()].reverse();
         
         const validObjects = objects.filter(obj => {
-            return obj.name !== 'background' && !(obj.name && obj.name.startsWith('guide-'));
+            return obj.name !== 'background' && obj.name !== 'artboard-bg' && !(obj.name && obj.name.startsWith('guide-'));
         });
 
         if (validObjects.length === 0) {
@@ -346,8 +354,12 @@ class UIManager {
         const bgInput = document.getElementById('bgColor');
         if (bgInput) {
             bgInput.addEventListener('input', (e) => {
-                this.canvas.setBackgroundColor(e.target.value, this.canvas.renderAll.bind(this.canvas));
-                this.canvas.fire('object:modified');
+                let artboard = this.canvas.getObjects().find(o => o.name === 'artboard-bg');
+                if (artboard) {
+                    artboard.set('fill', e.target.value);
+                    this.canvas.renderAll();
+                    this.canvas.fire('object:modified');
+                }
             });
         }
 
@@ -376,7 +388,9 @@ class UIManager {
                         const oldBg = this.canvas.getObjects().find(obj => obj.name === 'background');
                         if (oldBg) this.canvas.remove(oldBg);
                         
-                        this.canvas.insertAt(img, 0);
+                        // Insert above the artboard-bg
+                        const artboardExists = this.canvas.getObjects().find(o => o.name === 'artboard-bg');
+                        this.canvas.insertAt(img, artboardExists ? 1 : 0);
                         this.canvas.renderAll();
                         this.canvas.fire('object:added', {target: img});
                     });
@@ -882,7 +896,7 @@ class UIManager {
             });
 
             // ---- PASS 2: Capture ONLY the text element as a transparent mask ----
-            // Hide everything except the text object
+            // Hide everything except the text object (this automatically hides artboard-bg)
             const objectVisibility = [];
             this.canvas.getObjects().forEach(obj => {
                 if (obj === activeObj) return;
@@ -891,9 +905,6 @@ class UIManager {
             });
             activeObj.visible = true;
 
-            // Set a transparent background for the mask capture
-            const savedBgColor = this.canvas.backgroundColor;
-            this.canvas.setBackgroundColor('rgba(0,0,0,0)', () => {});
             this.canvas.renderAll();
 
             const textMaskDataUrl = this.canvas.toDataURL({
@@ -902,7 +913,6 @@ class UIManager {
             });
 
             // ---- Restore everything ----
-            this.canvas.setBackgroundColor(savedBgColor, () => {});
             objectVisibility.forEach(item => { item.obj.visible = item.visible; });
             activeObj.visible = true;
             this.canvas.getObjects().forEach(obj => {
@@ -970,7 +980,8 @@ class UIManager {
                 const oldBg = this.canvas.getObjects().find(o => o.name === 'background');
                 if (oldBg) this.canvas.remove(oldBg);
 
-                this.canvas.insertAt(img, 0);
+                const artboardExists = this.canvas.getObjects().find(o => o.name === 'artboard-bg');
+                this.canvas.insertAt(img, artboardExists ? 1 : 0);
 
                 // Remove the original text element (it's now baked into the image)
                 this.canvas.remove(activeObj);

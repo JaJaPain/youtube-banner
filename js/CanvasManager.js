@@ -5,14 +5,15 @@ class CanvasManager {
         this.canvas = new fabric.Canvas('canvas', {
             width: this.wrapper.clientWidth - 80,
             height: this.wrapper.clientHeight - 80,
-            backgroundColor: '#000000',
+            backgroundColor: 'transparent',
             preserveObjectStacking: true,
             fireMiddleClick: true,
-            stopContextMenu: true
+            stopContextMenu: true,
+            controlsAboveOverlay: true
         });
 
-        // Clip canvas content to the preset boundaries
-        this.updateClipPath();
+        // Setup the virtual artboard
+        this.updateArtboard();
 
         this.setupNavigation();
         
@@ -25,16 +26,30 @@ class CanvasManager {
         });
     }
 
-    /** Clip rendering to the logical canvas area so nothing overflows */
-    updateClipPath() {
+    /** Maintain a solid background rectangle to represent the artboard area */
+    updateArtboard() {
         const preset = this.getPreset();
-        this.canvas.clipPath = new fabric.Rect({
-            left: 0,
-            top: 0,
+        let artboard = this.canvas.getObjects().find(o => o.name === 'artboard-bg');
+        
+        if (!artboard) {
+            artboard = new fabric.Rect({
+                left: 0,
+                top: 0,
+                fill: document.getElementById('bgColor') ? document.getElementById('bgColor').value : '#000000',
+                selectable: false,
+                evented: false,
+                name: 'artboard-bg'
+            });
+            this.canvas.insertAt(artboard, 0); // Bottom most layer
+        }
+        
+        artboard.set({
             width: preset.width,
-            height: preset.height,
-            absolutePositioned: true
+            height: preset.height
         });
+        
+        // Ensure handles are drawn above everything (including masks)
+        this.canvas.controlsAboveOverlay = true;
     }
 
     /** Get the active preset config from the global PLATFORM_PRESETS */
@@ -53,8 +68,8 @@ class CanvasManager {
         // Update guides
         guidesManager.setPreset(presetId);
 
-        // Update clip path to match new dimensions
-        this.updateClipPath();
+        // Update the virtual artboard to match new dimensions
+        this.updateArtboard();
 
         // Reset the viewport to fit the new dimensions
         this.resetView();
@@ -69,6 +84,9 @@ class CanvasManager {
         const preset = this.getPreset();
         const dimsHint = document.getElementById('presetDimsHint');
         if (dimsHint) dimsHint.innerText = `${preset.width} × ${preset.height}px`;
+
+        // Verify if elements bleed past the new boundaries
+        this.checkBleed();
     }
 
     /** Rebuild the bottom overlay-controls bar to show this preset's guide toggles */
@@ -212,21 +230,56 @@ class CanvasManager {
         });
     }
 
+    /** Check if any user elements exceed the bounds of the artboard */
+    checkBleed() {
+        const preset = this.getPreset();
+        const pw = preset.width;
+        const ph = preset.height;
+        let isBleeding = false;
+
+        const objects = this.canvas.getObjects().filter(obj => {
+            return obj.name !== 'background' && obj.name !== 'artboard-bg' && !(obj.name && obj.name.startsWith('guide-'));
+        });
+
+        for (const obj of objects) {
+            // getBoundingRect(true) returns the bounding box in absolute logical coordinates
+            const rect = obj.getBoundingRect(true);
+            // Add a small epsilon (1px) to prevent floating point false positives
+            if (rect.left < -1 || rect.top < -1 || rect.left + rect.width > pw + 1 || rect.top + rect.height > ph + 1) {
+                isBleeding = true;
+                break;
+            }
+        }
+
+        const warningIcon = document.getElementById('bleedWarning');
+        if (warningIcon) {
+            warningIcon.style.display = isBleeding ? 'flex' : 'none';
+        }
+    }
+
     clearCanvas() {
         // Deselect active object to clear handles and trigger UI updates
         this.canvas.discardActiveObject();
         
         // Collect non-guide objects first (don't mutate while iterating)
         const toRemove = this.canvas.getObjects().filter(obj => {
-            return !obj.name || !obj.name.startsWith('guide-');
+            return !obj.name || (!obj.name.startsWith('guide-') && obj.name !== 'artboard-bg');
         });
         toRemove.forEach(obj => this.canvas.remove(obj));
 
-        this.canvas.setBackgroundColor('#000000', this.canvas.renderAll.bind(this.canvas));
-        document.getElementById('bgColor').value = '#000000';
+        let artboard = this.canvas.getObjects().find(o => o.name === 'artboard-bg');
+        if (artboard) {
+            artboard.set('fill', '#000000');
+        }
+        
+        const bgColorInput = document.getElementById('bgColor');
+        if (bgColorInput) {
+            bgColorInput.value = '#000000';
+        }
         
         this.canvas.fire('selection:cleared');
         this.canvas.fire('object:modified');
+        this.canvas.renderAll();
     }
 
     async exportBanner(guidesManager) {
