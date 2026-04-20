@@ -67,6 +67,30 @@ def try_load_local_model(requested_model="flux"):
             model_type = "sdxl"
             print("SDXL Lightning loaded successfully on GPU!")
 
+        elif requested_model == "ernie":
+            from diffusers import ErnieImagePipeline
+            from transformers import BitsAndBytesConfig
+            print("Loading ERNIE-Image-Turbo...")
+            print("(Note: Diffusers does not support native GGUF loading for this model architecture yet. Loading the official Baidu model in 8-bit quantized mode to achieve equivalent memory footprint to the requested Q8_0 GGUF.)")
+
+            quantization_config = BitsAndBytesConfig(load_in_8bit=True)
+            try:
+                pipe = ErnieImagePipeline.from_pretrained(
+                    "Baidu/ERNIE-Image-Turbo",
+                    torch_dtype=torch.float16,
+                    quantization_config=quantization_config,
+                    local_files_only=True
+                )
+            except Exception:
+                pipe = ErnieImagePipeline.from_pretrained(
+                    "Baidu/ERNIE-Image-Turbo",
+                    torch_dtype=torch.float16,
+                    quantization_config=quantization_config
+                )
+            # Note: We do not call pipe.to("cuda") here because load_in_8bit automatically places it on the GPU
+            model_type = "ernie"
+            print("ERNIE model loaded successfully!")
+
         else: # Default to FLUX
             from diffusers import FluxPipeline
             model_id = "magespace/FLUX.1-schnell-bnb-nf4"
@@ -256,7 +280,7 @@ async def generate_banner(req: GenerateRequest):
         banner_prompt = f"background image, {aspect_desc}, {req.prompt}, professional, high quality"
         print(f"Generating image ({model_type}) at {gen_w}x{gen_h} for: {req.prompt}")
 
-        if (model_type == "flux" or model_type == "sdxl") and pipe is not None:
+        if (model_type == "flux" or model_type == "sdxl" or model_type == "ernie") and pipe is not None:
             generation_progress = 0
             
             def progress_callback(pipe_ref, step_index, timestep, callback_kwargs):
@@ -274,6 +298,16 @@ async def generate_banner(req: GenerateRequest):
                         guidance_scale=0.0,
                         width=gen_w,
                         height=gen_h,
+                        callback_on_step_end=progress_callback
+                    )
+                elif model_type == "ernie":
+                    return pipe(
+                        prompt=banner_prompt,
+                        num_inference_steps=8,
+                        guidance_scale=1.0,
+                        width=gen_w,
+                        height=gen_h,
+                        use_pe=True,
                         callback_on_step_end=progress_callback
                     )
                 else:    

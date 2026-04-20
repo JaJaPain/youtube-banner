@@ -14,7 +14,7 @@ class AIManager {
                 const toggle = document.getElementById('useLocalModelToggle');
                 const warning = document.getElementById('localModelWarning');
                 
-                if (data.loaded && (data.model_type === 'flux' || data.model_type === 'sdxl' || data.model_type === 'flux-local')) {
+                if (data.loaded && (data.model_type === 'flux' || data.model_type === 'sdxl' || data.model_type === 'ernie' || data.model_type === 'flux-local')) {
                     btn.disabled = false;
                     btn.style.opacity = '1';
                     toggle.checked = true;

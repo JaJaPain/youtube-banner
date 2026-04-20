@@ -2,55 +2,56 @@
 
 ![BannerCraft Pro Showcase](assets/Screenshot.png)
 
-A professional, high-performance web application designed for creating stunned YouTube banners (2560x1440) and thumbnails. This suite features a modularized architecture, offline-first AI generation capabilities, and a robust undo/redo history system.
+A professional, high-performance web application designed for creating stunning multi-platform banners and thumbnails. This suite features a modularized architecture, offline-first AI generation capabilities, a robust virtual artboard system, and a high-fidelity cinematic text integration engine.
 
-**Tags**: `python`, `fastapi`, `stable-diffusion`, `youtube-tools`, `javascript`
+**Tags**: `python`, `fastapi`, `stable-diffusion`, `youtube-tools`, `javascript`, `fabricjs`
 
 ## 🚀 Key Features
 
 ### 🎨 Advanced Design Tools
+- **Virtual Artboard System**: 
+    - Professional-grade workspace allowing elements to be positioned, scaled, and manipulated outside the canvas boundaries.
+    - Non-destructive workflow with clear visual feedback for off-canvas assets.
+- **Cinematic Text Integration ("Bake In")**:
+    - Atmospheric text blending that integrates characters directly into the background lighting.
+    - Supports **Soft Light** and **Overlay** blending modes with lighting-aware shadows and glow.
 - **Rich Text Engine**: 
-    - 15+ Premium fonts with instant cycling.
-    - Advanced **Drop Shadows** (Blur, X/Y Offset).
+    - 50+ Premium Google Fonts with instant cycling and keyboard navigation.
+    - Advanced **Drop Shadows** (Blur, X/Y Offset, Color).
     - Dynamic **Border Outlines** (Thickness & Color).
     - **Image Pattern Fills**: Map any uploaded image directly onto your text characters.
-- **Modular Sidebar UI**: 
-    - **Collapsible Sections**: Dedicated Background and Elements dropdowns for a clean, organized workflow.
-    - **Optimized Layout**: Reordered action buttons and AI controls for maximum design efficiency.
-    - **Visual Dividers**: Clear horizontal separators for distinct functional grouping.
+- **Multi-Platform Canvas Presets**: 
+    - **YouTube**: Banners (2560×1440) and Thumbnails (1280×720).
+    - **X (Twitter)**: Headers (1500×500) and Posts (1200×675).
+    - **Instagram**: Square Posts (1080×1080) and Stories/Reels (1080×1920).
+    - **DistroKid**: Album Covers (3000×3000).
+    - **Spotify**: Canvas (1080×1920).
 - **Interactive Layers List**:
-    - Real-time scrollable list of all text and image elements on the canvas. 
-    - **Stacking Controls**: Move Up/Down buttons on every layer to precisely control the Z-index (front-to-back ordering).
-    - Click-to-select functionality for rapid targeting of design assets.
+    - Real-time scrollable list of all design elements. 
+    - **Stacking Controls**: Intuitive Z-index management (Move Up/Down).
+    - **Layer Effects**: Adjust Opacity, Brightness, Contrast, and Blur per-layer.
 - **Canvas Navigation**: 
-    - **Zooming**: Smooth mouse wheel zoom or keyboard `+`/`-` keys.
-    - **Panning**: Middle-mouse button drag, Arrow Keys, or Alt/Shift+Drag.
-    - **Reset View**: Instant centering and scaling of the banner viewport.
-- **Safe Zone Guides**: Precise overlays for Mobile, Tablet, and Desktop "Safe Areas" to ensure your design looks perfect on every device.
-- **Project Management (.jjp Save/Load)**: 
-    - **Full Serialization**: Save your entire workspace to a single `.jjp` file. 
-    - **Self-Contained Projects**: All images (including AI-generated backgrounds) are converted to Base64 strings and embedded directly in the JSON, so your project never breaks.
-    - **Native File System Access**: Modern "Save As" experience allows you to choose your desired folder and filename.
-    - **Reconstruction Engine**: Instant redraw of the canvas and re-population of your UI Layers List upon loading.
+    - Smooth mouse wheel zoom and middle-mouse button panning.
+    - **Reset View**: Instant centering and scaling of the artboard.
 
 ### 🤖 Local & Cloud AI Generation
-- **Dual Local GPU Models**: Choose your power level based on your hardware:
+- **Triple Local GPU Model Choice**:
     - **FLUX.1 Schnell**: State-of-the-art geometry and text spelling (Requires ~12GB VRAM).
+    - **ERNIE-Image-Turbo**: High-fidelity 8-step generation with memory-optimized 8-bit quantized loading (Requires ~8GB VRAM).
     - **SDXL Lightning**: Ultra-fast 4-step generation for rapid iteration (Requires ~8GB VRAM).
-- **Performance Optimized**: Uses `local_files_only` logic to bypass Hugging Face network stalls, resulting in near-instant model loading from disk. 
-- **Safety First**: VRAM is automatically flushed during model swaps, and the generation button is locked until the model is confirmed active in memory.
+- **Performance Optimized**: Uses `local_files_only` logic and VRAM flushing for near-instant model swaps and execution.
 - **Cloud Fallback**: Automatically falls back to high-quality cloud inference if no local GPU is detected.
 
 ### 🛠 Technical Excellence
-- **Modular Frontend**: Refactored into discrete managers (`CanvasManager`, `UIManager`, `AIManager`, `HistoryManager`) for high maintainability.
-- **Undo/Redo System**: Robust command-pattern history tracking for every action (adding elements, moving, resizing, coloring). 
-    - Accessible via UI buttons or standard `Ctrl+Z` / `Ctrl+Y`.
-- **High-Res Export**: Generates a flattened 2560x1440 PNG with one click, perfectly sized for YouTube's upload requirements.
+- **Modular Frontend**: Discrete managers (`CanvasManager`, `UIManager`, `AIManager`, `HistoryManager`) for high maintainability.
+- **Undo/Redo System**: Robust command-pattern history tracking (Ctrl+Z / Ctrl+Y).
+- **Project Management (.jjp)**: Save/Load entire workspaces with embedded assets (Base64) for perfect portability.
+- **High-Res Export**: Intelligent quality scaling and platform-specific size checking.
 
 ## 📦 Installation & Setup
 
 ### ⚙️ Requirements
-- **GPU (for Local AI)**: **NVIDIA RTX series** (8GB+ VRAM recommended for SDXL, 12GB+ for FLUX). Local model execution (FLUX/SDXL) requires an NVIDIA GPU with CUDA support.
+- **GPU (for Local AI)**: NVIDIA RTX series (8GB+ VRAM). 
 - **Python**: 3.10+
 - **OS**: Windows (tested)
 
@@ -58,26 +59,17 @@ A professional, high-performance web application designed for creating stunned Y
    ```bash
    git clone https://github.com/JaJaPain/youtube-banner.git
    ```
-2. **Environment Setup**:
-   - Ensure you have **Python 3.10+** installed.
-   - The app automatically creates a virtual environment on first run.
-3. **Launch**:
-   - Simply double-click `run_app.bat`. This will:
-     - Initialize the FastAPI backend.
-     - Detect your GPU and prepare the local environment.
-     - Launch the frontend in your default browser.
+2. **Launch**:
+   - Simply double-click `run_app.bat`. This will initialize the FastAPI backend, detect your GPU, and launch the frontend in your browser.
 
 ## 📖 How to Use
 
-1. **Manage your Background**: Expand the **Background** section and set your solid color, upload an image, or describe your vision in the **AI Generator** box.
-2. **Pick your AI Model**: If using a local GPU, toggle the **Use Local AI Model** checkbox, select your model, and hit **Load Selected Model**.
-3. **Add & Manage Elements**: Expand the **Elements** section to add text blocks or upload images/logos.
-4. **Interactive Layer Control**: Use the scrollable **Layers List** to select and switch between elements directly from the sidebar.
-5. **Style**: Select any element (via canvas or layer list) to reveal its context-sensitive styling menu. Adjust fonts, patterns, and shadows in real-time.
-6. **Preview**: Toggle the **Overlays** at the bottom to ensure your text stays within the "Safe Area" for mobile viewers.
-7. **Save Project**: Use the **Save Project** button to export your design as a `.jjp` file for later editing. This captures all layers and assets.
-8. **Load Project**: Drag-and-drop or select a `.jjp` file via the **Load Project** button to pick up exactly where you left off.
-9. **Download**: Click **Download PNG** to save your high-resolution masterpiece.
+1. **Pick your Preset**: Select your target platform (YouTube, Instagram, etc.) from the **Canvas Preset** dropdown.
+2. **Manage your Background**: Expand the **Background** section to set colors, upload images, or generate one with AI.
+3. **Cinematic Text**: Add text, then use the **Bake In** button under "Cinematic Text" to blend it artistically into your background.
+4. **Interactive Layers**: Use the **Layers List** in the sidebar to select elements that are off-canvas or buried behind others.
+5. **Project Safety**: Regularly use **Save Project** to export a `.jjp` file. This is your "Source Code" for the design.
+6. **Export**: Click **Download PNG** to save the final flattened image for upload.
 
 ## 📄 License
 This project is licensed under the MIT License.
