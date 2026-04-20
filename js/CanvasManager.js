@@ -293,9 +293,15 @@ class CanvasManager {
         const originalWidth = this.canvas.getWidth();
         const originalHeight = this.canvas.getHeight();
 
-        // Hide all guides
+        // Hide all guides safely without triggering a re-render loop that brings back bleed masks
+        const guideVisibilities = new Map();
         const savedVisibility = { ...guidesManager.visible };
-        Object.keys(savedVisibility).forEach(id => guidesManager.toggle(id, false));
+        if (guidesManager && guidesManager.guideObjects) {
+            guidesManager.guideObjects.forEach(obj => {
+                guideVisibilities.set(obj, obj.visible);
+                obj.visible = false;
+            });
+        }
 
         // Set canvas to export dimensions at zoom 1
         this.canvas.setWidth(exportW);
@@ -327,6 +333,10 @@ class CanvasManager {
             const dataUrl = this.canvas.toDataURL({
                 format: format === 'image/jpeg' ? 'jpeg' : 'png',
                 quality: quality,
+                left: 0,
+                top: 0,
+                width: exportW,
+                height: exportH,
                 multiplier: 1 / (window.devicePixelRatio || 1)
             });
             
@@ -406,7 +416,14 @@ class CanvasManager {
             mgr.canvas.setHeight(originalHeight);
             mgr.canvas.setZoom(currentZoom);
             mgr.canvas.setViewportTransform(currentVpt);
-            Object.keys(savedVisibility).forEach(id => guidesManager.toggle(id, savedVisibility[id]));
+            if (guidesManager && guidesManager.guideObjects) {
+                guidesManager.guideObjects.forEach(obj => {
+                    if (guideVisibilities.has(obj)) {
+                        obj.visible = guideVisibilities.get(obj);
+                    }
+                });
+            }
+            mgr.canvas.renderAll();
         }
     }
 }

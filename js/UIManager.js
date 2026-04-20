@@ -892,6 +892,10 @@ class UIManager {
             this.canvas.renderAll();
             const bgDataUrl = this.canvas.toDataURL({
                 format: 'png',
+                left: 0,
+                top: 0,
+                width: exportW,
+                height: exportH,
                 multiplier: 1 / (window.devicePixelRatio || 1)
             });
 
@@ -909,6 +913,10 @@ class UIManager {
 
             const textMaskDataUrl = this.canvas.toDataURL({
                 format: 'png',
+                left: 0,
+                top: 0,
+                width: exportW,
+                height: exportH,
                 multiplier: 1 / (window.devicePixelRatio || 1)
             });
 
